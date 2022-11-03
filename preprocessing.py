@@ -2,14 +2,65 @@
 #!/usr/bin/python
 import psycopg2
 import json
+from nodetypes import node_types_dict
+
+
+
+def get_unique_node_types_dic(level,dic):
+    if level["Node Type"] not in dic:
+        dic[level['Node Type']]=0
+    if level['Node Type'] in dic:
+        dic[level['Node Type']]+=1
+    if "Plans" not in level:
+        return 
+    else:
+        for p in level['Plans']:
+            get_unique_node_types_dic(p,dic)
+    return dic
+
+
+def get_nodelist(level,lis):
+    lis.append(level["Node Type"])
+    if "Plans" not in level:
+        return 
+    else:
+        for p in level['Plans']:
+            get_nodelist(p,lis)
+    return lis
+
+
+def fetch_AQPS(cur,node_types,sqlquery,query_plans):
+        for key in node_types:
+            new_d=[]
+            if key in node_types_dict:
+                #print(node_types_dict[key])
+                cur.execute("SET LOCAL "+node_types_dict[key]+" TO OFF")
+                cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery)
+                rows = cur.fetchall()
+                res = json.dumps(rows)
+                res=json.loads(res)
+                for x in res[0][0]:
+                    query_plans.append(x)
+                    print('Execution Time:',x['Execution Time'])
+                    root = x['Plan']
+                    aqp_nodes = get_nodelist(root,new_d)
+                    print(aqp_nodes)
+
+def process_QEP(rows,query_plans,node_types_d):
+    res = json.dumps(rows)
+    res = json.loads(res)
+    for x in res[0][0]:
+        query_plans.append(x)
+        print('Execution Time:',x['Execution Time'])
+        node_types = get_unique_node_types_dic(x['Plan'],node_types_d)
+        print(node_types)
+    return node_types
 
 def connect():
     """ Connect to the PostgreSQL database server """
+    
     conn = None
     try:
-        # read connection parameters
-        
-
         # connect to the PostgreSQL server
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(
@@ -19,46 +70,27 @@ def connect():
             password="1234")
         # create a cursor
         cur = conn.cursor()
-        
-	# execute a statement
-        print('PostgreSQL database version:')
-        cur.execute('SELECT version()')
-        # display the PostgreSQL database server version
-        db_version = cur.fetchone()
-        print(db_version)
-        cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + '''select
-	ps_partkey,
-	sum(ps_supplycost * ps_availqty) as value
-from
-	partsupp,
-	supplier,
-	nation
-where
-	ps_suppkey = s_suppkey
-	and s_nationkey = n_nationkey
-	and n_name = 'GERMANY'
-	and ps_supplycost > 10000
-	and s_acctbal < 10000
-group by
-	ps_partkey having
-		sum(ps_supplycost * ps_availqty) > (
-			select
-				sum(ps_supplycost * ps_availqty) * 0.0001000000
-			from
-				partsupp,
-				supplier,
-				nation
-			where
-				ps_suppkey = s_suppkey
-				and s_nationkey = n_nationkey
-				and n_name = 'GERMANY'
-		)
-order by
-	value desc''')
-        rows = cur.fetchall()
-        x = json.dumps(rows)
-        print(x)
-       
+        # read test files 
+        for no in range(1,11):
+            filename = 'Queries\q'+str(no)+'.sql'
+            print("Reading "+filename)
+            #filename = 'Queries\q1.sql'
+            
+            fd = open(filename, 'r')
+            sqlquery = fd.read()
+            fd.close()
+
+            node_types_d = {}
+            query_plans = []
+            # Getting query plan
+            cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery)
+            rows = cur.fetchall()
+            node_types=process_QEP(rows,query_plans,node_types_d)
+            
+            # fetching AQPS
+            fetch_AQPS(cur,node_types.keys(),sqlquery,query_plans)
+            #print(query_plans[len(query_plans)-1])    
+            print("Total number of query plans: "+str(len(query_plans)))          
 	# close the communication with the PostgreSQL
         cur.close()
     except (Exception, psycopg2.DatabaseError) as error:
@@ -70,3 +102,5 @@ order by
 
 
 connect()
+#print(node_types_dict)
+
