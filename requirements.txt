@@ -1,0 +1,10 @@
+blockdiag==3.0.0
+funcparserlib==1.0.0
+Pillow==9.3.0
+psycopg2==2.9.5
+PyQt5==5.15.7
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.11.0
+sqlglot==9.0.6
+sqlparse==0.4.3
+webcolors==1.12
