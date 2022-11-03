@@ -285,7 +285,16 @@ group by
 order by
 	o_orderpriority
 limit 1;'''
-
+def recursiveStanza(self,layer):
+    #stopping condition
+    if len(layer.children)==0:
+        return {'name':layer.label}
+    else:
+        lvl={'name':layer.label,'children':[]}
+        for x in range(len(layer.children)):
+                lvl['children'].append(self.recursiveStanza(layer.children[x]))
+        return lvl
+    
 rightArrow=" -> "
 leftArrow=" <- "
 def get_unique_node_types(level):
@@ -299,14 +308,25 @@ def get_unique_node_types(level):
 
     return total
 
-
-for x in res1[0][0]:
+counter=7
+def conversion_for_blockdiag(layer,counter):
+    counter-=1
+    #stopping condition
+    if "Plans" not in layer:
+        return ["'"+str(counter)+")"+layer['Node Type']+"';"]
+    else:
+        str_list = []
+        for x in range(len(layer['Plans'])):
+            s="'"+str(counter)+")"+layer['Node Type']+"' "+leftArrow
+            for rel in conversion_for_blockdiag(layer["Plans"][x],counter):
+                str_list.append(s+rel)
+        return str_list
+for x in res2[0][0]:
     print('Execution Time:',x['Execution Time'])
     # Plan lvl 
     root = x['Plan']
-
     #print(root.keys())
-    res = get_unique_node_types(root)
+    res = conversion_for_blockdiag(root,counter)
     print(res)
 
 

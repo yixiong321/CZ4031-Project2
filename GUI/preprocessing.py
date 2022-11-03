@@ -2,7 +2,7 @@
 #!/usr/bin/python
 import psycopg2
 import json
-from nodetypes import node_types_dict
+from GUI.nodetypes import node_types_dict
 
 
 
@@ -28,8 +28,21 @@ def get_nodelist(level,lis):
             get_nodelist(p,lis)
     return lis
 
+def conversion_for_blockdiag(layer,counter):
+    counter+=1
+    #stopping condition
+    if "Plans" not in layer:
+        return ["'"+str(counter)+")"+layer['Node Type']+"';"]
+    else:
+        str_list = []
+        for x in range(len(layer['Plans'])):
+            s="'"+str(counter)+")"+layer['Node Type']+"' "+leftArrow
+            for rel in conversion_for_blockdiag(layer["Plans"][x],counter):
+                str_list.append(s+rel)
+        return str_list
 
 def fetch_AQPS(cur,node_types,sqlquery,query_plans):
+        aqp_relations=[]
         for key in node_types:
             new_d=[]
             if key in node_types_dict:
@@ -45,6 +58,11 @@ def fetch_AQPS(cur,node_types,sqlquery,query_plans):
                     root = x['Plan']
                     aqp_nodes = get_nodelist(root,new_d)
                     print(aqp_nodes)
+                    counter=0
+                    res=conversion_for_blockdiag(root,counter)
+                    print(res)
+                    aqp_relations.append(res)
+        return aqp_relations
 
 def process_QEP(rows,query_plans,node_types_d):
     res = json.dumps(rows)
@@ -54,7 +72,15 @@ def process_QEP(rows,query_plans,node_types_d):
         print('Execution Time:',x['Execution Time'])
         node_types = get_unique_node_types_dic(x['Plan'],node_types_d)
         print(node_types)
-    return node_types
+        counter=0
+        res=conversion_for_blockdiag(x['Plan'],counter)
+        print(res)
+    return node_types,res
+
+rightArrow=" -> "
+leftArrow=" <- "
+
+
 
 def connect():
     """ Connect to the PostgreSQL database server """
@@ -72,9 +98,9 @@ def connect():
         cur = conn.cursor()
         # read test files 
         for no in range(1,11):
-            filename = 'Queries\q'+str(no)+'.sql'
-            print("Reading "+filename)
-            #filename = 'Queries\q1.sql'
+            #filename = 'Queries\q'+str(no)+'.sql'
+            #print("Reading "+filename)
+            filename = 'Queries\q2.sql'
 
             fd = open(filename, 'r')
             sqlquery = fd.read()
@@ -102,6 +128,6 @@ def connect():
             print('Database connection closed.')
 
 
-connect()
+#connect()
 #print(node_types_dict)
 
