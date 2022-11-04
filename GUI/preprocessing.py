@@ -2,80 +2,79 @@
 #!/usr/bin/python
 import psycopg2
 import json
-from GUI.nodetypes import node_types_dict
+from nodetypes import node_types_dict
 
 
-
-def get_unique_node_types_dic(level,dic):
+def get_unique_node_types_dic(level, dic):
     if level["Node Type"] not in dic:
-        dic[level['Node Type']]=0
+        dic[level['Node Type']] = 0
     if level['Node Type'] in dic:
-        dic[level['Node Type']]+=1
+        dic[level['Node Type']] += 1
     if "Plans" not in level:
         return 
     else:
         for p in level['Plans']:
-            get_unique_node_types_dic(p,dic)
+            get_unique_node_types_dic(p, dic)
     return dic
 
 
-def get_nodelist(level,lis):
+def get_nodelist(level, lis):
     lis.append(level["Node Type"])
     if "Plans" not in level:
         return 
     else:
         for p in level['Plans']:
-            get_nodelist(p,lis)
+            get_nodelist(p, lis)
     return lis
 
-def conversion_for_blockdiag(layer,counter):
-    counter+=1
+def conversion_for_blockdiag(layer, counter):
+    counter += 1
     #stopping condition
     if "Plans" not in layer:
-        return ["'"+str(counter)+")"+layer['Node Type']+"';"]
+        return ["'" + str(counter) + ")" + layer['Node Type'] + "';"]
     else:
         str_list = []
         for x in range(len(layer['Plans'])):
-            s="'"+str(counter)+")"+layer['Node Type']+"' "+leftArrow
-            for rel in conversion_for_blockdiag(layer["Plans"][x],counter):
+            s="'" + str(counter) + ")" + layer['Node Type'] + "' " + leftArrow
+            for rel in conversion_for_blockdiag(layer["Plans"][x], counter):
                 str_list.append(s+rel)
         return str_list
 
-def fetch_AQPS(cur,node_types,sqlquery,query_plans):
-        aqp_relations=[]
+def fetch_AQPS(cur, node_types, sqlquery, query_plans):
+        aqp_relations = []
         for key in node_types:
-            new_d=[]
+            new_d= []
             if key in node_types_dict:
                 #print(node_types_dict[key])
-                cur.execute("SET LOCAL "+node_types_dict[key]+" TO OFF")
+                cur.execute("SET LOCAL " + node_types_dict[key] + " TO OFF")
                 cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery)
                 rows = cur.fetchall()
                 res = json.dumps(rows)
-                res=json.loads(res)
+                res = json.loads(res)
                 for x in res[0][0]:
                     query_plans.append(x)
-                    print('Execution Time:',x['Execution Time'])
+                    print('Execution Time:', x['Execution Time'])
                     root = x['Plan']
                     aqp_nodes = get_nodelist(root,new_d)
                     print(aqp_nodes)
-                    counter=0
-                    res=conversion_for_blockdiag(root,counter)
+                    counter = 0
+                    res = conversion_for_blockdiag(root,counter)
                     print(res)
                     aqp_relations.append(res)
         return aqp_relations
 
-def process_QEP(rows,query_plans,node_types_d):
+def process_QEP(rows, query_plans, node_types_d):
     res = json.dumps(rows)
     res = json.loads(res)
     for x in res[0][0]:
         query_plans.append(x)
         print('Execution Time:',x['Execution Time'])
-        node_types = get_unique_node_types_dic(x['Plan'],node_types_d)
+        node_types = get_unique_node_types_dic(x['Plan'], node_types_d)
         print(node_types)
-        counter=0
-        res=conversion_for_blockdiag(x['Plan'],counter)
+        counter = 0
+        res = conversion_for_blockdiag(x['Plan'], counter)
         print(res)
-    return node_types,res
+    return node_types, res
 
 rightArrow=" -> "
 leftArrow=" <- "
