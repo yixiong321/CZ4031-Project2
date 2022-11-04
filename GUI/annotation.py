@@ -193,4 +193,5 @@ print('Database is disconnected.')
 
 # to find out:
 # what is memoize
-# wy are there more than one pathway for a query plan
+# why are there more than one pathway for a query plan
+# how to explain using cost
