@@ -19,7 +19,7 @@ def get_unique_node_types_dic(level, dic):
 
 
 def get_nodelist(level, lis):
-    lis.append(level["Node Type"])
+    lis.append(level['Node Type'])
     if "Plans" not in level:
         return 
     else:

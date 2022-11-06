@@ -39,24 +39,24 @@ def connect():
 # Scan Methods
 
 # Sequential Scan
-def seq_scan_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def seq_scan_ann():
+    return f"""The Sequential Scan operation is performed here 
             because there is no index created on the tables."""
 
 # Index Scan
-def index_scan_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def index_scan_ann():
+    return f"""The Index Scan operation is performed here 
             because there is an index on the tables and an index scan has 
             lower cost compared to a sequential scan."""
 
 # Index-Only Scan
-def index_only_scan_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def index_only_scan_ann():
+    return f"""The Index-Only Scan operation is performed here 
             because only one attribute is selected for display."""
 
 # Bitmap Scan
-def bitmap_scan_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def bitmap_scan_ann():
+    return f"""The Bitmap Scan operation is performed here 
             because the number of record schosen are too much for the index 
             scan and too little for the sequential scan."""
 
@@ -64,72 +64,138 @@ def bitmap_scan_ann(query_plan):
 # Join Methods
 
 # Nested Loop Join
-def nl_join_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def nl_join_ann():
+    return f"""The Nested Loop Join operation is performed here 
             because the join clause is '<' OR there is no join clause."""
 
+# Nested Loop Semi Join
+def nl_semi_join_ann():
+    return f"""The Nested Loop Semi Join operation is performed here 
+            because there is an EXISTS clause in the query that requires the 
+            outer rows to be filtered by the inner rows, returning the results
+             of the outer rows only."""
+
 # Merge Join
-def merge_join_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def merge_join_ann():
+    return f"""The Merge Join operation is performed here 
             because both tables are sorted and the join clause is '='."""
 
 # Hash Join
-def hash_join_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def hash_join_ann():
+    return f"""The Hash Join operation is performed here 
             because a hash table has been created on one of the tables."""
 
 # Miscellaneous Operations
 
 # Hash
-def hash_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def hash_ann():
+    return f"""The Hash operation is performed here 
             because the table is the smaller table so minimal memory is 
             required to store the hash table in memory."""
 
 # Sort
-def sort_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def sort_ann():
+    return f"""The Sort operation is performed here 
             because a merge-join operation will be done later in the query 
             plan."""
 
+# Incremental Sort
+def incremental_sort_ann():
+    return f"""The Incremental Sort operation is performed here 
+            because it has a much lower cost due to the reduction in memory 
+            usage and the likelihood of spilling the sorts into disk."""
+
 # Aggregate
-def aggregate_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def aggregate_ann():
+    return f"""The Aggregate operation is performed here 
             because there is an aggregate function COUNT, SUM, AVG, MAX or MIN
              in this query."""
 
 # Hash Aggregate
-def hash_aggregate_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def hash_aggregate_ann():
+    return f"""The Hash Aggregate operation is performed here 
             because there is a GROUP BY clause in the query and the tables are
              unsorted."""
 
 # Group Aggregate
-def group_aggregate_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def group_aggregate_ann():
+    return f"""The Group Aggregate operation is performed here 
             because there is a GROUP BY clause and the tables are sorted."""
 
 # Limit
-def limit_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
-            because there is a limit/offset clause in the SELECT query."""
+def limit_ann():
+    return f"""The Limit operation is performed here 
+            because there is a LIMIT/OFFSET clause in the SELECT query."""
 
 # Unique
-def unique_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def unique_ann():
+    return f"""The Unique operation is performed here 
             because the query requires a distinct value to be take from the 
-            result and it has a lower cost than Hash Aggregate or Group 
+            result and it has a lower cost than Hash Aggregate and Group 
             Aggregate."""
 
 # Append
-def append_ann(query_plan):
-    return f"""The {query_plan['Node Type']} operation is performed here 
+def append_ann():
+    return f"""The Append operation is performed here 
             because multiple results are combined into one."""
+
+# Gather Merge
+def gather_merge_ann():
+    return f"""The Gather Merge operation is performed here 
+            because the data is sorted and the there is a need to combine the 
+            output of the child nodes."""
+
+# Materialize
+def materialize_ann():
+    return f"""The Materialize operation is performed here 
+            because there are only a few tuples in the output of the child 
+            node so it materializes its output into memory before passing to 
+            the next node."""
+
+# Memoize
+def memoize_ann():
+    return f"""The Memoize operation is performed here 
+            because there is enough available memory to cache the required 
+            rows that are have not been cached. It has a lower cost than 
+            Materialize because there are no I/O costs to the disk."""
 
 # SetOp
 
 # refer to https://severalnines.com/blog/overview-various-auxiliary-plan-nodes-postgresql/
 
+annotation_dict = {
+    "Seq Scan" : seq_scan_ann(),
+    "Index Scan" : index_scan_ann(),
+    "Index Only Scan" : index_only_scan_ann(),
+    "Bitmap Heap Scan" : bitmap_scan_ann(),
+    "Bitmap Index Scan" : bitmap_scan_ann(),
+    "Nested Loop" : nl_join_ann(),
+    "Nested Loop Semi Join" : nl_semi_join_ann,
+    "Merge Join" : merge_join_ann(),
+    "Hash Join" : hash_join_ann(),
+    "Hash" : hash_ann(),
+    "Sort" : sort_ann(),
+    "Incremental Sort" : incremental_sort_ann(),
+    "Aggregate" : aggregate_ann(),
+    "HashAggregate" : hash_aggregate_ann(),
+    "GroupAggregate" : group_aggregate_ann(),
+    "Limit" : limit_ann(),
+    "Unique" : unique_ann(),
+    "Append" : append_ann(),
+    "Gather Merge" : gather_merge_ann(),
+    "Materialize" : materialize_ann(),
+    "Memoize" : memoize_ann()
+}
+
+# Traverse through plan and annotate respective nodes accordingly
+def traverse_plan(query_plan):
+    list_of_nodes = []
+    for x in query_plan[0][0]:
+        get_nodelist(x['Plan'], list_of_nodes)
+    ann_list = []
+    for node_name in list_of_nodes:
+        ann_list.append(annotation_dict.get(node_name))
+    print(ann_list)
 
 conn = connect()
 cur = conn.cursor()
@@ -145,13 +211,16 @@ query_plans = []
 
 # Getting query plan
 cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery)
-rows = cur.fetchall()
-node_types = process_QEP(rows, query_plans, node_types_d)[0]
+plan = cur.fetchall()
+print(plan)
+# node_types = process_QEP(rows, query_plans, node_types_d)[0]
 print()
 
+traverse_plan(plan)
+
 # Getting AQPs
-fetch_AQPS(cur, node_types.keys(), sqlquery, query_plans)
-print("\nTotal number of query plans: " + str(len(query_plans)))
+# fetch_AQPS(cur, node_types.keys(), sqlquery, query_plans)
+# print("\nTotal number of query plans: " + str(len(query_plans)))
 
 cur.close()
 conn.close()
@@ -192,6 +261,4 @@ print('Database is disconnected.')
 # Database is disconnected.
 
 # to find out:
-# what is memoize
-# why are there more than one pathway for a query plan
 # how to explain using cost
