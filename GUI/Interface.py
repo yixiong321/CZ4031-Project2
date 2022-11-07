@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, uic, Qt, QtSvg
 import sys, psycopg2
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication
 from blockdiag import parser, builder, drawer
-from GUI.preprocessing import fetch_AQPS, process_QEP
+from preprocessing import fetch_AQPS, process_QEP
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -51,23 +51,24 @@ class MainWindow(QMainWindow):
             self.c_r = self.SQL_Connection.cursor()
 
             QueryFromGUI = self.txt_sql.toPlainText()
-
-            self.c_r.execute(QueryFromGUI)
+            
+            self.c_r.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + QueryFromGUI)
 
             records = self.c_r.fetchall()
             node_types_d = {}
             query_plans = []
 
-            node_types,qep_relation=process_QEP(records,query_plans,node_types_d)
+            node_types,res,query_plans=process_QEP(records,query_plans,node_types_d)
+
             # fetching AQPS
-            aqp_relations=fetch_AQPS(self.c_r,node_types.keys(), QueryFromGUI ,query_plans)
+            query_plans,aqp_relations = fetch_AQPS(self.c_r,node_types.keys(),QueryFromGUI,query_plans)
             print("Total number of query plans: "+str(len(query_plans)))  
 
             # qep_relation and aqp_relations are used to store relations to be used for blockdiag
             ## sample relation for a single blockdiag
             # ["'1)Limit'  <- '2)Aggregate'  <- '3)Sort'  <- '4)Nested Loop'  <- '5)Index Scan';",
             #  "'1)Limit'  <- '2)Aggregate'  <- '3)Sort'  <- '4)Nested Loop'  <- '5)Bitmap Heap Scan'  <- '6)Bitmap Index Scan';"]
-            self.annotation1.setText(str(records))
+            #self.annotation1.setText(str(records))
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
