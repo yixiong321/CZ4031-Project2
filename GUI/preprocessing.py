@@ -37,7 +37,8 @@ def conversion_for_blockdiag(layer, counter):
         for x in range(len(layer['Plans'])):
             s="'" + str(counter) + ")" + layer['Node Type'] + "' " + leftArrow
             for rel in conversion_for_blockdiag(layer["Plans"][x], counter):
-                str_list.append(s+rel)
+                str_list.append(s+ rel)
+
         return str_list
 
 def fetch_AQPS(cur, node_types, sqlquery, query_plans):
@@ -90,15 +91,15 @@ def connect():
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(
             host="localhost",
-            database="TPC-H",
+            database="TPC_H NEW",
             user="postgres",
-            password="1234")
+            password="admin")
         # create a cursor
         cur = conn.cursor()
         # read test files 
         for no in range(1,11):
             filename = 'GUI\Queries\q'+str(no)+'.sql'
-            #print("Reading "+filename)
+            print("Reading "+filename)
             #filename = 'GUI\Queries\q2.sql'
 
             fd = open(filename, 'r')
@@ -135,6 +136,6 @@ def connect():
             print('Database connection closed.')
 
 
-#connect()
-#print(node_types_dict)
+connect()
+print(node_types_dict)
 
