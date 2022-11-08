@@ -1,5 +1,5 @@
 
-import sqlglot 
+import sqlglot
 import sqlparse
 res1 = [([{'Plan': {
     'Node Type': 'Aggregate', 
