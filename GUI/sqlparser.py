@@ -48,4 +48,54 @@ for i in list1:
 for i in list2:
     print(i)
 
+# print(len(list2))
+# # row = 0
+# for i in list1:
+#     c = str(i)
 
+#     if c in sql_keywords and row == 0:
+#         list1.append(c)
+        
+    
+#     elif c not in sql_keywords:
+#         list1[row] += c
+    
+#     elif c in sql_keywords and row != 0:
+#         row+=1
+#         list1.append(str(i))
+
+# print(len(list1))
+    
+
+
+
+
+# i = 0
+# while(i <=11 ):
+#     print(stmt.tokens[i])
+#     i +=1
+#print(stmt) prints whole SQL query
+#print(stmt.tokens[0]) prints SELECT
+#print(len(stmt))
+#for i in stmt:
+ #   list1.append(stmt.tokens[i])
+
+#print(list1)
+
+
+
+#make SQL keywords capital
+#res = sqlparse.format(str2, encoding=None, reindent = True, keyword_case = "upper") #reindent_aligned gives hierarchical alignment
+#x = res.split("\n")
+#print(x)
+#print(res)
+
+#make attributes capital
+#res = sqlparse.format(str1,encoding=None, , identifier_case = "upper")
+#print(res)
+
+
+
+
+
+ 
