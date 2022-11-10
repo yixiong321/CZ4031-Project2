@@ -7,7 +7,7 @@ str0 = "Select l_returnflag,l_linestatus,sum(l_quantity) as sum_qty,sum(l_extend
 query = "Select * from orders, customer where c_custkey = o_custkey and c_name = 'Cheng' ORDER BY c_phone"
 str2 = "select 100.00 * sum(case when p_type like 'PROMO%' then l_extendedprice * (1 - l_discount) else 0 end) / sum(l_extendedprice * (1 - l_discount)) as promo_revenue from lineitem, part where l_partkey = p_partkey and l_shipdate >= date '1993-11-01' limit 1;"
 
-sql_keywords = ['SELECT', 'WHERE', 'GROUP BY','ORDER BY', 'EXISTS', 'LIMIT', 'DISTINCT']
+sql_keywords = ['SELECT', 'FROM', 'WHERE', 'GROUP BY','ORDER BY', 'EXISTS', 'LIMIT', 'DISTINCT']
 list1 = []
 list2 = []
 
@@ -23,27 +23,30 @@ stmt = parsed[0]
 for i in stmt.tokens:
     list1.append(str(i))
 
+print("this is list1")
 print(list1)
-print(len(list1))
+print("length of list1: "+ str(len(list1)))
+print()
 
 
 row = 0
 for i in list1:
-    print("iteration for " + i)
+    # print("iteration for " + i)
     if i in sql_keywords and row == 0:
         list2.append(i)
+        row+=1
         
     
     elif i not in sql_keywords:
         if 'WHERE' in i.split(None):
             row+=1
             list2.append(i)
-        else: list2[row] += i
+        else: list2[row-1] += i
     
     elif i in sql_keywords and row != 0:
         row+=1
         list2.append(i)
-    print(list2)
+    # print(list2)
 
 for i in list2:
     print(i)
