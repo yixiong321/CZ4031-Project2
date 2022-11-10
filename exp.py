@@ -5,6 +5,7 @@ import sqlparse
 import psycopg2
 import json
 from pathlib import Path
+import re
 
 q2 = '''select
 	o_orderpriority,
@@ -235,23 +236,19 @@ def display(plan,nodes,level=0):
         node['Subplan Name']=plan['Subplan Name']
     # Seq scan & aggregate
     if 'Filter' in plan:
-        print('filter:' + plan['Filter']
-        .replace('::numeric','')
-        .replace('::bpchar','')
-        .replace('::date','')
-        + ' ', end='')
-        node['Filter']= plan['Filter'].replace('::numeric','').replace('::bpchar','').replace('::date','').replace('(','').replace(')','')
+        print('filter:' + convert_condition(plan['Filter']) + ' ', end='')
+        node['Filter']= convert_condition(plan['Filter'])
     # Hash join
     if 'Hash Cond' in plan:
-        print('cond:' + plan['Hash Cond'] + ' ', end='')
+        print('cond:' + convert_condition(plan['Hash Cond']) + ' ', end='')
         node['Hash Cond']=process_cond(plan['Hash Cond'])
     # Merge join
     if 'Merge Cond' in plan:
-        print('cond:' + plan['Merge Cond'] + ' ', end='')
+        print('cond:' + convert_condition(plan['Merge Cond']) + ' ', end='')
         node['Merge Cond']=process_cond(plan['Merge Cond'])
     # Index only scan # this cond most prob used for NL join
     if 'Index Cond' in plan:
-        print('cond:' + plan['Index Cond'] + ' ', end='')
+        print('cond:' + convert_condition(plan['Index Cond']) + ' ', end='')
         node['Index Cond']=process_cond(plan['Index Cond'])
     if 'Alias' in plan:
         print("AS " + plan['Alias'], end='')
@@ -331,6 +328,18 @@ def explore(plan):
         ]:
             print('***Interesting?:"'+ key + '" value:' + str(plan[key]), end=',')
 
+        
+def convert_condition(cond):
+    #regex_list=[r'\((\w+\.)?(\w+) = (\w+\.)?(\w+)\)',r"\((\w+) = ('\w+')(::\w+)\)" ]
+    # match the regex to the condition and convert before saving it in nodes
+    # should be a list to store a = b , b = a 
+    cond = re.sub(r'\((\w+\.)?(\w+) ([!<>=]+) (\w+\.)?(\w+)\)',r'\2 \3 \5',cond) # (a.b = c.d) -> b = c 
+    cond = re.sub(r"\((\w+\.)?(\w+) ([!<>=]+) ('.+')(::\w+)\)",r"\2 \3 \4",cond) # (a = 'b'::type) -> a = 'b'
+
+    #reverse
+    cond = re.sub(r"\(('.+')(::\w+) ([!<>=]+) (\w+\.)?(\w+)\)",r"\1 \3 \5",cond) # ('a'::type = 'b') -> 'a' = b
+    return cond
+    
 
 connect()
 
@@ -364,11 +373,6 @@ class relation():
         self.keyterm = keyterm
         self.node=node 
         self.level = level
-        
-def convert_condition(cond):
-    regex_list=[r'\((\w+\.)?(\w+) = (\w+\.)?(\w+)\)',r"\((\w+) = ('\w+')(::\w+)\)" ]
-    # match the regex to the condition and convert before saving it in nodes
-    # should be a list to store a = b , b = a 
 
 
 

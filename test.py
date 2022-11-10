@@ -37,11 +37,11 @@ def connect():
             print('Query',i)
             query = Path('Queries/q' + str(i) + '.sql').read_text()
         '''
-        query = Path('Queries/q10.sql').read_text()
+        query = Path('GUI/Queries/q10.sql').read_text()
         cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + query)
         rows = cur.fetchall()
         x = json.dumps(rows)
-        print(x)
+        #print(x)
         print()
         for a in rows[0][0]:
             display(a['Plan'])
