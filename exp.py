@@ -51,12 +51,6 @@ group by
 order by
 	revenue desc,
 	o_orderdate'''
-#keywords= ['select','from','where','group by','order by','group by','limit']
-#q2=q2.replace(',','')
-#tokens = q2.split('\n')
-#for i in range(0, len(tokens)):
-#    tokens[i]=tokens[i].replace('\t','')
-#print(tokens)
 
 # create a dictionary for mapping? key would be token and value would be node details
 relation_dict={}
@@ -86,48 +80,76 @@ def process_cond(s):
             rev=' '+li[0]+' '+rev
     return [ans,rev]
 
-class Rec():
-    def __init__(self,str_val,i,nodes):
-        self.keyterm = str_val
-        if hasattr(self,'linelist'):
-            self.linelist.append(i)
-        else:
-            self.linelist = [i]
-        self.nodelist=[]
+# use each node's condition to map to each specific lines 
+# NOTE condition might not be unqiue
+
+def map_node_to_line(nodes,sql_query_list):
+    # Scans
+    search_terms=['Alias']
+    print(len(nodes))
+    for s in search_terms:
         for node in nodes:
-            for val in node.values():
-                if str_val == val: 
-                    self.nodelist.append(node)
-                elif str_val in val:
-                    self.nodelist.append(node)
-        self.lvllist = []
-
-    def print_key(self):
-        print("Key:"+self.keyterm + "| Levels:"+ 
-        str(self.lvllist)+"| Lines:"+str(self.linelist)+
-        " | Nodelist: "+str(self.nodelist)+""
-        )
-
+            if s in node.keys():
+                for line in sql_query_list:
+                    temp = line.query_term+'_'+str(line.subquery_number)
+                    if node[s] == line.query_term or node[s]==temp:
+                        line.set_node(node)
+                        if node in nodes:
+                            nodes.remove(node)
+    print(len(nodes))          
+    # Joins & Filter
+    search_terms=['Hash Cond',"Merge Cond",'Filter','Join Filter']
+    for s in search_terms:
+        for node in nodes:
+            if s in node.keys():
+                for line in sql_query_list:
+                    if node[s] == line.query_term:
+                        line.set_node(node)
+class line():
+    def __init__(self,query_term,line_number,subquery_number):
+        self.query_term=query_term
+        self.line_number=line_number
+        self.subquery_number=subquery_number
+        self.node = {}
+        
+    def print_attrs(self):
+        print(self.line_number,self.query_term,self.subquery_number,self.node)
+    def set_node(self,node):
+        self.node = node
 
 class Query():
     def __init__(self,query):
         sqlquery = sqlparse.format(query,encoding=None,keyword_case='upper')
         self.query = sqlquery
-        self.dic={}
-
-    def get_dic(self):
-        return self.dic
-    
+        
     def get_query(self):
         return self.query
 
-    def map_nodes(self,nodes):
-        sql = self.query.replace('\t','').replace('AND ','').split('\n')
-        for i,line in enumerate(sql):
-            self.dic[line]=Rec(line,i,nodes)
-            #line == condition
-            
-        #print(self.dic)
+    def process_query(self):
+        sql=self.query.replace('\t','').replace('AND ','').replace(',','').split('\n')
+        for x in range(len(sql)):
+            sql[x]=sql[x].lstrip()
+        sql_query_list=[]
+        subquery_counter=-1
+        stack=[]
+        j=1
+        for i,query_term in enumerate(sql):
+            # start of subquery
+            if query_term=="SELECT" or query_term=="(SELECT":
+                stack.append(query_term)
+                subquery_counter+=j
+                
+            if query_term[0]==')':
+                stack.pop()
+                subquery_counter-=1
+                j+=1
+            sql_query_list.append(line(query_term,i,subquery_counter))
+        self.sql_query_list = sql_query_list
+    
+    def print_sql_query_list(self):
+        for i in self.sql_query_list:
+            i.print_attrs()
+
 
 def connect():
     """ Connect to the PostgreSQL database server """
@@ -162,17 +184,8 @@ def connect():
             print('Query',i)
             query = Path('Queries/q' + str(i) + '.sql').read_text()
         '''
-        query = Path('GUI/Queries/q2.sql').read_text()
+        query = Path('GUI/Queries&Json/q2.sql').read_text()
         q = Query(query)
-        '''
-        q=query.replace(',','')
-        q=q.replace('and ','')
-        tokens = q.split('\n')
-        
-        for i in range(0, len(tokens)):
-            tokens[i]=tokens[i].replace('\t','')
-        print(tokens)
-        '''
         cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + q.get_query())
         rows = cur.fetchall()
         x = json.dumps(rows)
@@ -181,14 +194,14 @@ def connect():
         nodes=[]
         for a in rows[0][0]:
             display(a['Plan'],nodes)
-        # close the communication with the PostgreSQL
         print()
         print('Nodes:')
         print(nodes)
-        q.map_nodes(nodes)
-        for i in q.get_dic().values():
-            i.print_key()
+        q.process_query()
         
+        map_node_to_line(nodes,q.sql_query_list)
+        q.print_sql_query_list()
+        # close the communication with the PostgreSQL
         cur.close()
     except (Exception, psycopg2.DatabaseError) as error:
         print(error)
@@ -241,15 +254,15 @@ def display(plan,nodes,level=0):
     # Hash join
     if 'Hash Cond' in plan:
         print('cond:' + convert_condition(plan['Hash Cond']) + ' ', end='')
-        node['Hash Cond']=process_cond(plan['Hash Cond'])
+        node['Hash Cond']=convert_condition(plan['Hash Cond'])
     # Merge join
     if 'Merge Cond' in plan:
         print('cond:' + convert_condition(plan['Merge Cond']) + ' ', end='')
-        node['Merge Cond']=process_cond(plan['Merge Cond'])
+        node['Merge Cond']=convert_condition(plan['Merge Cond'])
     # Index only scan # this cond most prob used for NL join
     if 'Index Cond' in plan:
         print('cond:' + convert_condition(plan['Index Cond']) + ' ', end='')
-        node['Index Cond']=process_cond(plan['Index Cond'])
+        node['Index Cond']=convert_condition(plan['Index Cond'])
     if 'Alias' in plan:
         print("AS " + plan['Alias'], end='')
         node['Alias']=plan['Alias']
@@ -375,6 +388,8 @@ class relation():
         self.level = level
 
 
+
+            
 
 
 

@@ -40,7 +40,8 @@ def conversion_for_blockdiag(layer, counter):
                 str_list.append(s+ rel)
 
         return str_list
-
+# a->b->c 
+# b->d
 def fetch_AQPS(cur, node_types, sqlquery, query_plans):
         aqp_relations = []
         for key in node_types:
