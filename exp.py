@@ -98,13 +98,26 @@ def map_node_to_line(nodes,sql_query_list):
                             nodes.remove(node)
     print(len(nodes))          
     # Joins & Filter
-    search_terms=['Hash Cond',"Merge Cond",'Filter','Join Filter']
+    search_terms=['Hash Cond',"Merge Cond",'index Cond'+'Filter','Join Filter']
     for s in search_terms:
         for node in nodes:
             if s in node.keys():
                 for line in sql_query_list:
                     if node[s] == line.query_term:
                         line.set_node(node)
+
+def node_to_lines(nodes,sql_query_list):
+    for node in nodes:
+        values=node.values()
+        for line in sql_query_list:
+            if line.query_term in values:
+                node['lines'].append(line.line_number)
+    
+    for i in nodes:
+        print(i)
+    #return nodes
+
+
 class line():
     def __init__(self,query_term,line_number,subquery_number):
         self.query_term=query_term
@@ -199,8 +212,10 @@ def connect():
         print(nodes)
         q.process_query()
         
-        map_node_to_line(nodes,q.sql_query_list)
+        #map_node_to_line(nodes,q.sql_query_list)
+        node_to_lines(nodes,q.sql_query_list)
         q.print_sql_query_list()
+        
         # close the communication with the PostgreSQL
         cur.close()
     except (Exception, psycopg2.DatabaseError) as error:
@@ -212,7 +227,7 @@ def connect():
 
 def display(plan,nodes,level=0):
     print('    ' * level, end='')
-    node={}
+    node={'lines':[]}
     print(plan['Node Type'] + '|', end='')
     node['Node Type'] = plan['Node Type']
     if 'Join Type' in plan:# Loop/Join
