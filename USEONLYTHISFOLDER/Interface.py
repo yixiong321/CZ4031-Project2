@@ -585,10 +585,10 @@ class UI_MainWindow(object):
 
         # if no join in QEP, shrink off and on config list
         if check_for_join(result):
-            self.plans_list = generate_aqp(result, self.cursor,
+            self.plans_list,mapping = generate_aqp(result, self.cursor,
                                            postgreSQL_select_Query, self.conn, True)
         else:
-            self.plans_list = generate_aqp(result, self.cursor,
+            self.plans_list,mapping = generate_aqp(result, self.cursor,
                                            postgreSQL_select_Query, self.conn, False)
         # For checking
 
