@@ -95,19 +95,21 @@ class MainWindow(QMainWindow):
             self.query_plans = {}
             #
 
-            
+            block_diag_relations=[]
             # Formats query
             sqlquery = Query(QueryFromGUI).get_query() 
             # Getting query plan
             node_types,res,self.query_plans=fetch_QEP(self.c_r,sqlquery,self.query_plans,self.node_types_d)
+            block_diag_relations.append(res)
             # fetching AQPS
             if len(node_types) > 1:
-                self.query_plans,aqp_relations = fetch_AQPS(self.c_r,node_types.keys(),sqlquery,self.query_plans)
+                self.query_plans,self.block_diag_relations = fetch_AQPS(self.c_r,node_types.keys(),sqlquery,self.query_plans,block_diag_relations)
             # query_plans stores list of plans , [QEP, 'rest of AQPs']
             # aqp_relations stores list of string input for blockdiags for AQPs
         
             mapping = get_mapping(self.query_plans,sqlquery)
-            
+            for i in mapping:
+                i.print_sql_query_list()
             #print("Total number of query plans: "+str(len(self.query_plans))) 
             #print(len(mapping))
             
@@ -143,7 +145,8 @@ class MainWindow(QMainWindow):
 
                 print(test)
                 TEXT.setText(test)
-                BUTTON = QPushButton("Display Phisical Query Plan")
+                BUTTON = QPushButton("Display Physical Query Plan")
+                
                 BUTTON.clicked.connect(partial(self.displayDiag, loop_v))
                 vbox.addWidget(TEXT)
                 self.AddToTab(tab1, groupbox)
@@ -176,11 +179,13 @@ class MainWindow(QMainWindow):
     #Display diagram button
     def displayDiag(self, number):
 
-        print(self.aqp_relations[number])
+        print(self.block_diag_relations[number])
 
-        diag_string = self.aqp_relations[number]
-
-        diag_string = "blockdiag {orientation = portrait" + str(diag_string[0]) + "}"
+        inner =" "
+        for i in self.block_diag_relations[number]:
+            inner=inner+i+'\n'
+        #print(inner)
+        diag_string = "blockdiag {orientation = portrait;" + inner + " }"
 
         print(diag_string)
 

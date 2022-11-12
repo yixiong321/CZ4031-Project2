@@ -42,10 +42,10 @@ def conversion_for_blockdiag(layer, counter):
 
         return str_list
 
-def fetch_AQPS(cur, node_types, sqlquery, query_plans):
+def fetch_AQPS(cur, node_types, sqlquery, query_plans,relations_list):
         counter=1
         sqlquery = Query(sqlquery).get_query()
-        aqp_relations = []
+        
         for key in node_types:
             new_d= []
             if key in node_types_dict:
@@ -65,10 +65,11 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans):
                     counter = 0
                     res = conversion_for_blockdiag(root,counter)
                     #print(res)
-                    aqp_relations.append(res)
-        return query_plans,aqp_relations
+                    relations_list.append(res)
+        return query_plans,relations_list
 
 def fetch_QEP(cur,query, query_plans, node_types_d):
+    query=Query(query).get_query()
     cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + query)
     rows = cur.fetchall()
     res = json.dumps(rows)
@@ -119,13 +120,15 @@ def connect():
         # Formats query
         sqlquery = Query(sqlquery).get_query() 
         # Getting query plan
+        block_rel=[]
         node_types,res,query_plans=fetch_QEP(cur,sqlquery,query_plans,node_types_d)
+        block_rel.append(res)
         # node_types refer to the nodes in the QEP
         # res refers to the partial string input for blockdiag for QEP
         # query_plans refers to the list of query plans, currently storing only the QEP
         
         # fetching AQPS
-        query_plans,aqp_relations = fetch_AQPS(cur,node_types.keys(),sqlquery,query_plans)
+        query_plans,block_rel = fetch_AQPS(cur,node_types.keys(),sqlquery,query_plans,block_rel)
         # query_plans stores list of plans , [QEP, 'rest of AQPs']
         # aqp_relations stores list of string input for blockdiags for AQPs
        
@@ -387,4 +390,3 @@ def convert_condition(cond):
     cond = re.sub(r"\(('.+')(::\w+) ([!<>=]+) (\w+\.)?(\w+)\)",r"\1 \3 \5",cond) # ('a'::type = 'b') -> 'a' = b
     return cond
 
-connect()

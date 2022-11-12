@@ -53,17 +53,7 @@ order by
 	o_orderdate'''
 
 # create a dictionary for mapping? key would be token and value would be node details
-relation_dict={}
-def get_mapping(relation_dict,tokens,nodes):
-    # from "tablename"
-    for token in tokens:
-        for node in nodes:
-            for val in node.values():
-                if token == val: 
-                    relation_dict[token]=node
-                elif token in val:
-                    relation_dict[token]=node
-    return relation_dict
+
 
 def process_cond(s):
     s=s.replace('(','').replace(')','')
@@ -160,6 +150,7 @@ class Query():
         return self.query
 
     def process_query(self):
+        subquery_counter=0
         sql=self.query.replace('\t','').replace('AND ','').replace(',','').split('\n')
         for x in range(len(sql)):
             sql[x]=sql[x].lstrip()
