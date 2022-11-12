@@ -533,7 +533,7 @@ class UI_MainWindow(object):
 
         self.window.setLayout(main)
 
-        self.window.resize(renderer.viewBox().width() * 2, renderer.viewBox().height() * 1.5)
+        self.window.resize(renderer.viewBox().width() * 2, renderer.viewBox().height() * 2)
 
         main.setStretch(5, 1)
         self.window.show()
@@ -625,7 +625,7 @@ class UI_MainWindow(object):
             TEXT = QTextEdit()
             TEXT.setReadOnly(True)
             TEXT.setText(result)
-            BUTTON = QPushButton("Display Phisical Query Plan")
+            BUTTON = QPushButton("Display Physical Query Plan")
             BUTTON.clicked.connect(partial(self.displayDiagram, x))
             vbox.addWidget(TEXT)
             self.AddToTab(tab1, groupbox)
