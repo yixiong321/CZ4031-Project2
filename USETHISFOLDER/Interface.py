@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QVBoxLayout,
 from blockdiag import parser, builder, drawer
 
 from annotation import *
-from preprocessing import fetch_AQPS, process_QEP
+from preprocessing import *
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 
 SQL_QUERIES = [
@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        uic.loadUi("MainUI.ui", self)
+        uic.loadUi("USETHISFOLDER\MainUI.ui", self)
 
         self.setWindowTitle("Project 2")
 
@@ -87,27 +87,36 @@ class MainWindow(QMainWindow):
 
             QueryFromGUI = self.txt_sql.toPlainText()
             
-            self.c_r.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + QueryFromGUI)
+            #self.c_r.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + QueryFromGUI)
 
-            records = self.c_r.fetchall()
-            node_types_d = {}
-            self.query_plans = []
+            #records = self.c_r.fetchall()
 
+            self.node_types_d = {}
+            self.query_plans = {}
             #
 
-            node_types,res,self.query_plans=process_QEP(records,self.query_plans,node_types_d)
-
-
-
+            
+            # Formats query
+            sqlquery = Query(QueryFromGUI).get_query() 
+            # Getting query plan
+            node_types,res,self.query_plans=fetch_QEP(self.c_r,sqlquery,self.query_plans,self.node_types_d)
+            # fetching AQPS
+            if len(node_types) > 1:
+                self.query_plans,aqp_relations = fetch_AQPS(self.c_r,node_types.keys(),sqlquery,self.query_plans)
+            # query_plans stores list of plans , [QEP, 'rest of AQPs']
+            # aqp_relations stores list of string input for blockdiags for AQPs
+        
+            mapping = get_mapping(self.query_plans,sqlquery)
+            
+            #print("Total number of query plans: "+str(len(self.query_plans))) 
+            #print(len(mapping))
+            
             #print(ann_list)
 
             #res = "blockdiag { " + str(res[0]) + "}"
 
             #print(self.query_plans)
 
-            if len(node_types_d) > 1:
-            # fetching AQPS
-                self.query_plans,self.aqp_relations = fetch_AQPS(self.c_r,node_types.keys(),QueryFromGUI,self.query_plans)
 
             #print(self.query_plans[0])
 
