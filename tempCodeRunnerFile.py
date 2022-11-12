@@ -1,1 +1,1 @@
-q.print_sql_query_list()
+or line.query_term in node[term]

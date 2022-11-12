@@ -84,38 +84,59 @@ def process_cond(s):
 # NOTE condition might not be unqiue
 
 def map_node_to_line(nodes,sql_query_list):
-    # Scans
-    search_terms=['Alias']
-    print(len(nodes))
-    for s in search_terms:
-        for node in nodes:
-            if s in node.keys():
-                for line in sql_query_list:
-                    temp = line.query_term+'_'+str(line.subquery_number)
-                    if node[s] == line.query_term or node[s]==temp:
+    # exclusing nestedloop joins
+    #joins 
+    #mapping_condition=['Hash Cond','Merge Cond']
+    #for term in mapping_condition:
+    #    for node in nodes:
+    #        if term in node.keys():
+    #            for line in sql_query_list:
+    #                if node[term]==line.query_term or line.query_term in node[term]:
+    #                    #node['lines'].append(line.line_number)
+    #                    line.set_node(node)
+    #                    if node in nodes:
+    #                        nodes.remove(node)
+    
+
+
+    joins_cond = ['Merge Cond','Hash Cond','Join Filter']
+    # settle original first?
+    for term in joins_cond:
+        for line in sql_query_list:
+            for node in nodes:
+                if term in node.keys():
+                    if line.node=={}:
+                        if line.query_term == node[term] or line.query_term in node[term]:
+                            line.set_node(node)
+                            if node in nodes:
+                                nodes.remove(node)
+    # Scans # settle original first == Seq Scan
+    scans_cond = ['Alias']
+    # settle original first?
+    for term in scans_cond:
+        for line in sql_query_list:
+            for node in nodes:
+                if term in node.keys():
+                    if line.query_term == node[term] and line.node=={}:
                         line.set_node(node)
                         if node in nodes:
                             nodes.remove(node)
-    print(len(nodes))          
-    # Joins & Filter
-    search_terms=['Hash Cond',"Merge Cond",'index Cond'+'Filter','Join Filter']
-    for s in search_terms:
-        for node in nodes:
-            if s in node.keys():
-                for line in sql_query_list:
-                    if node[s] == line.query_term:
-                        line.set_node(node)
 
-def node_to_lines(nodes,sql_query_list):
-    for node in nodes:
-        values=node.values()
+    # Index scan + cond , dont remove once added ?? or only care about scanning?
+    sub = ['Relation Name','Index Cond']
+    for term in sub:
         for line in sql_query_list:
-            if line.query_term in values:
-                node['lines'].append(line.line_number)
-    
-    for i in nodes:
-        print(i)
-    #return nodes
+            for node in nodes:
+                if term in node.keys():
+                    if line.node=={}:
+                        if line.query_term == node[term] or line.query_term in node[term] :
+                            line.set_node(node)
+
+    # Limit?
+
+    print(nodes)
+
+
 
 
 class line():
@@ -197,7 +218,7 @@ def connect():
             print('Query',i)
             query = Path('Queries/q' + str(i) + '.sql').read_text()
         '''
-        query = Path('GUI/Queries&Json/q2.sql').read_text()
+        query = Path('GUI/Queries&Json/q3.sql').read_text()
         q = Query(query)
         cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + q.get_query())
         rows = cur.fetchall()
@@ -212,8 +233,8 @@ def connect():
         print(nodes)
         q.process_query()
         
-        #map_node_to_line(nodes,q.sql_query_list)
-        node_to_lines(nodes,q.sql_query_list)
+        map_node_to_line(nodes,q.sql_query_list)
+        #node_to_lines(nodes,q.sql_query_list)
         q.print_sql_query_list()
         
         # close the communication with the PostgreSQL
@@ -269,15 +290,15 @@ def display(plan,nodes,level=0):
     # Hash join
     if 'Hash Cond' in plan:
         print('cond:' + convert_condition(plan['Hash Cond']) + ' ', end='')
-        node['Hash Cond']=convert_condition(plan['Hash Cond'])
+        node['Hash Cond']=process_cond(plan['Hash Cond'])
     # Merge join
     if 'Merge Cond' in plan:
         print('cond:' + convert_condition(plan['Merge Cond']) + ' ', end='')
-        node['Merge Cond']=convert_condition(plan['Merge Cond'])
+        node['Merge Cond']=process_cond(plan['Merge Cond'])
     # Index only scan # this cond most prob used for NL join
     if 'Index Cond' in plan:
         print('cond:' + convert_condition(plan['Index Cond']) + ' ', end='')
-        node['Index Cond']=convert_condition(plan['Index Cond'])
+        node['Index Cond']=process_cond(plan['Index Cond'])
     if 'Alias' in plan:
         print("AS " + plan['Alias'], end='')
         node['Alias']=plan['Alias']
