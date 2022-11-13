@@ -219,8 +219,8 @@ def hash_ann(plan):
     node_info = find_node_info('Index Scan', plan, [])
     if node_info:
         table = node_info['Alias']
-        return f"""The Hash operation is performed here because the table '{table}' is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
-    return f"""The Hash operation is performed here because the table is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
+        return f"""The Hash operation is performed here because the table '{table}' is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}\n."""
+    return f"""The Hash operation is performed here because the table is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}\n."""
 
 
 # Sort
@@ -448,7 +448,7 @@ def traverse_qep(qep, aqps, string_v):
         elif node == 'Incremental Sort':
             string_v +=(incremental_sort_ann())
         elif node == 'Aggregate':
-            string_v +=(aggregate_ann())
+            string_v +=(aggregate_ann(x))
         elif node == 'HashAggregate':
             string_v +=(hash_aggregate_ann())
         elif node == 'GroupAggregate':
