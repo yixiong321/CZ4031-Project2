@@ -1,17 +1,16 @@
 import traceback
 from functools import partial
-
-from PyQt5 import QtWidgets, uic, Qt, QtSvg, QtCore, QtGui
 import sys, psycopg2
 
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QVBoxLayout, QGroupBox, QTextEdit, QStyleFactory, \
-    QWidget, QTableWidget, QTableWidgetItem
+from PyQt5 import QtWidgets, QtSvg, QtCore, QtGui
+from PyQt5.QtWidgets import QPushButton, QApplication, QVBoxLayout, QGroupBox, QTextEdit, QWidget, QTableWidget, QTableWidgetItem
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+
 
 from blockdiag import parser, builder, drawer
-
 from annotation import *
 from preprocessing import *
-from PyQt5.QtWebEngineWidgets import QWebEngineView
+
 
 SQL_QUERIES = [
     ["Select * from orders, customer where c_custkey = o_custkey and c_name = 'Cheng' ORDER BY c_phone"],
@@ -299,7 +298,6 @@ class UI_MainWindow(object):
         self.txt_sql.setText(str(self.qList.itemData(self.qList.currentIndex()))[2:-2])
 
     def ConnectSQL(self):
-        print("Clicked!")
 
         try:
 
@@ -345,10 +343,9 @@ class UI_MainWindow(object):
         inner = ""
         for i in self.block_diag_relations[number]:
             inner = inner + i + '\n'
-        # print(inner)
+
         diag_string = "blockdiag {orientation = portrait;\n" + inner + "}"
 
-        print(diag_string)
 
         tree = parser.parse_string(diag_string)
 
@@ -374,6 +371,8 @@ class UI_MainWindow(object):
     def ExeSQLComm(self):
         try:
 
+            print("Start Query Execution process. It might take a lot of time! Application may freeze!")
+
             self.CleanUI()
 
             self.tW.removeTab(0)  # Need it?
@@ -384,9 +383,6 @@ class UI_MainWindow(object):
 
             QueryFromGUI = self.txt_sql.toPlainText()
 
-            # self.c_r.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + QueryFromGUI)
-
-            # records = self.c_r.fetchall()
 
             self.node_types_d = {}
             self.query_plans = {}
@@ -404,54 +400,8 @@ class UI_MainWindow(object):
             self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types.keys(), QueryFromGUI,
                                                                      self.query_plans, block_diag_relations)
 
-            # query_plans stores list of plans , [QEP, 'rest of AQPs']
-            # aqp_relations stores list of string input for blockdiags for AQPs
-
-            # mapping = get_mapping(self.query_plans,QueryFromGUI)
-            # x = tabulate(generate_table(mapping), headers=head, tablefmt="grid")
-            # head = ['Line No.', 'Query Terms', 'QEP']
-            # AEP_counter = len(mapping)
-            # for i in range(AEP_counter):
-            #     head.append('AEP' + str(i+1))
-
-            # for i in mapping:
-            #     print()
-            #     i.print_sql_query_list()
-
-            # #This gets all the query terms of a query in a list
-            # qtlist = mapping[0].return_query_terms_list()
-            # nodelinelist = mapping[0].return_node_line()
-            # print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
-            # #print(tabulate(qtlist, tablefmt="grid"))
-            # head = ["Line No.", "Query Term", "Annotation"]
-
-            # table = [["" for i in range(3)] for j in range(len(qtlist))]
-            # count = 0
-            # for i in qtlist:
-            #     table[count][0] = nodelinelist[count][0] #line number
-            #     table[count][1] = i #query term
-            #     table[count][2] = nodelinelist[count][1] #node
-            #     count+=1
-
-            # print(tabulate(table, headers=head, tablefmt="grid"))
-            # print("Total number of query plans: "+str(len(self.query_plans)))
-            # print(len(mapping))
-
-            # print(ann_list)
-
-            # res = "blockdiag { " + str(res[0]) + "}"
-
-            # print(self.query_plans)
-
-            # print(self.query_plans[0])
-
-            # ann_list = traverse_qep(self.query_plans[0])
-
-            # print(self.query_plans)
-
             loop_v = 0
             for x in range(1, len(list(self.query_plans.values())[1:]) + 1):
-                # print(plan)
 
                 tab1 = QtWidgets.QWidget()
                 tab1.layout = QVBoxLayout()
@@ -467,11 +417,11 @@ class UI_MainWindow(object):
                 print(self.query_plans['0'])
                 print([aqplist[x]])
                 test = traverse_qep(self.query_plans['0'], [aqplist[x]], "")
-                print("test:")
+
                 print(test)
-                # print(test)
+
                 TEXT.setText(test)
-                # TEXT.setText(x)
+
 
                 BUTTON2 = QPushButton("Display Mapping")
 
@@ -493,15 +443,6 @@ class UI_MainWindow(object):
 
                 loop_v += 1
 
-                print("XD")
-
-            # print("Total number of query plans: "+str(len(query_plans)))
-
-            # qep_relation and aqp_relations are used to store relations to be used for blockdiag
-            ## sample relation for a single blockdiag
-            # ["'1)Limit'  <- '2)Aggregate'  <- '3)Sort'  <- '4)Nested Loop'  <- '5)Index Scan';",
-            #  "'1)Limit'  <- '2)Aggregate'  <- '3)Sort'  <- '4)Nested Loop'  <- '5)Bitmap Heap Scan'  <- '6)Bitmap Index Scan';"]
-            # self.annotation1.setText(str(records))
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
@@ -521,15 +462,9 @@ class UI_MainWindow(object):
         for i in range(AEP_counter - 1):
             self.data['AEP' + str(i + 1)] = []
 
-        # print(self.data)
-
         ammount_of_c = 0
 
-        # value = generate_table(mapping[self.tW.currentIndex()])
         value = generate_table(mapping)
-        # print(value.get_query()
-
-        # print(value)
 
         for x in value:
 
@@ -580,11 +515,10 @@ class UI_MainWindow(object):
             horHeaders.append(key)
             for m, item in enumerate(self.data[key]):
                 newitem = QTableWidgetItem(item)
-                print(newitem)
+
                 table.setItem(m, n, newitem)
         table.setHorizontalHeaderLabels(horHeaders)
 
-        print("Display Query!")
 
         self.main = QVBoxLayout()
 
@@ -618,8 +552,3 @@ def GUI():
     MainWindow.show()
     sys.exit(app.exec_())
 
-# Graph checker (generator): http://interactive.blockdiag.com/
-
-# Documentation: http://blockdiag.com/en/blockdiag/introduction.html#setup
-# How to embed in pyt: https://stackoverflow.com/questions/67652887/how-to-write-python-code-to-use-blockdiag-package
-# Symbols: https://www.guru99.com/relational-algebra-dbms.html#14
