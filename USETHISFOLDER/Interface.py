@@ -314,9 +314,9 @@ class MainWindow(QMainWindow):
             
             if "AEP4" in self.data:
                 if str(x[6]) == "None" :
-                    self.data["AEP3"].append("~")
+                    self.data["AEP4"].append("~")
                 else:
-                    self.data["AEP3"].append(str(x[6]))
+                    self.data["AEP4"].append(str(x[6]))
 
             ammount_of_c += 1
 
