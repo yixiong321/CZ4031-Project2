@@ -164,15 +164,14 @@ class MainWindow(QMainWindow):
             # query_plans stores list of plans , [QEP, 'rest of AQPs']
             # aqp_relations stores list of string input for blockdiags for AQPs
         
-            mapping = get_mapping(self.query_plans,QueryFromGUI)
-            head = ['Line No.', 'Query Terms', 'QEP']
-            AEP_counter = len(mapping)
-            for i in range(AEP_counter):
-                head.append('AEP' + str(i+1))
+            #mapping = get_mapping(self.query_plans,QueryFromGUI)
+            # x = tabulate(generate_table(mapping), headers=head, tablefmt="grid")
+            # head = ['Line No.', 'Query Terms', 'QEP']
+            # AEP_counter = len(mapping)
+            # for i in range(AEP_counter):
+            #     head.append('AEP' + str(i+1))
             
-            print("in interface head is:")
-            print(head)
-            x = tabulate(generate_table(mapping), headers=head, tablefmt="grid")
+            
             # for i in mapping:
             #     print()
             #     i.print_sql_query_list()
@@ -266,16 +265,16 @@ class MainWindow(QMainWindow):
     def DisplayTable(self):
 
         #Sample code to run the table window
-
-
+        mapping = get_mapping(self.query_plans,self.txt_sql.toPlainText())
 
         self.data = {
+                'Line No.':[],
                 'Query Term': [],
-                'Node Type': []}
+                'QEP': []}
 
         ammount_of_c = 0
 
-        value = generate_table(self.mapping[self.tW.currentIndex()])
+        value = generate_table(mapping[self.tW.currentIndex()])
 
       #  print(value.get_query()
 
