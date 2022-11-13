@@ -110,7 +110,16 @@ class MainWindow(QMainWindow):
             # aqp_relations stores list of string input for blockdiags for AQPs
         
             mapping = get_mapping(self.query_plans,QueryFromGUI)
-            generate_table(mapping)
+            print("Total number of query plans: "+str(len(mapping)))
+            table1 = []
+            table2 = []
+            for i in mapping:
+                print()
+                i.print_sql_query_list()
+                table = generate_table(i)
+            head = ["Line No.", "Query Term", "Node Type"]
+            x = tabulate(table, headers=head, tablefmt="grid")
+            print(x)
             # for i in mapping:
             #     print()
             #     i.print_sql_query_list()
@@ -164,8 +173,9 @@ class MainWindow(QMainWindow):
 
                 test = traverse_qep(self.query_plans[loop_v], "")
 
-                print(test)
-                TEXT.setText(test)
+                #print(test)
+                #TEXT.setText(test)
+                TEXT.setText(x)
                 BUTTON = QPushButton("Display Physical Query Plan")
                 
                 BUTTON.clicked.connect(partial(self.displayDiag, loop_v))

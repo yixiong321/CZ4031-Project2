@@ -123,7 +123,7 @@
       <item row="3" column="1">
        <widget class="QLineEdit" name="password">
         <property name="text">
-         <string>admin</string>
+         <string>kshitij123</string>
         </property>
        </widget>
       </item>
@@ -142,7 +142,7 @@
       <item row="4" column="1">
        <widget class="QLineEdit" name="db_n">
         <property name="text">
-         <string>TPC_H NEW</string>
+         <string>TPC-H</string>
         </property>
        </widget>
       </item>
