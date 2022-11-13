@@ -44,14 +44,13 @@ def conversion_for_blockdiag(layer, counter):
 
 def fetch_AQPS(cur, node_types, sqlquery, query_plans,relations_list):
         counter=1
-        sqlquery = Query(sqlquery).get_query()
-        
+        sqlquery = Query(sqlquery)
         for key in node_types:
-            new_d= []
             if key in node_types_dict:
                 #print(node_types_dict[key])
+                
                 cur.execute("SET LOCAL " + node_types_dict[key] + " TO OFF")
-                cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery)
+                cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery.get_query())
                 rows = cur.fetchall()
                 res = json.dumps(rows)
                 res = json.loads(res)
@@ -69,13 +68,14 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans,relations_list):
         return query_plans,relations_list
 
 def fetch_QEP(cur,query, query_plans, node_types_d):
-    query=Query(query).get_query()
-    cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + query)
+    
+    query=Query(query)
+    cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + query.get_query())
     rows = cur.fetchall()
     res = json.dumps(rows)
     res = json.loads(res)
     for x in res[0][0]:
-        query_plans['0']=(x)
+        query_plans['0']=x
         node_types = get_unique_node_types_dic(x['Plan'], node_types_d)
         counter = 0
         res = conversion_for_blockdiag(x['Plan'], counter)
@@ -118,7 +118,7 @@ def connect():
         node_types_d = {}
         query_plans = {}
         # Formats query
-        sqlquery = Query(sqlquery).get_query() 
+        
         # Getting query plan
         block_rel=[]
         node_types,res,query_plans=fetch_QEP(cur,sqlquery,query_plans,node_types_d)
@@ -135,8 +135,8 @@ def connect():
         mapping = get_mapping(query_plans,sqlquery)
           
         print("Total number of query plans: "+str(len(query_plans))) 
-        #for i in mapping:
-        #    i.print_sql_query_list() 
+        for i in mapping:
+            i.print_sql_query_list() 
        
 
 	# close the communication with the PostgreSQL
@@ -218,14 +218,16 @@ class line():
 
 class Query():
     def __init__(self,query):
-        sqlquery = sqlparse.format(query,encoding=None,keyword_case='upper')
+        sqlquery = sqlparse.format(query,encoding=None,strip_comments=True,reindent=True,keyword_case='upper')
         self.query = sqlquery
         
     def get_query(self):
         return self.query
 
     def process_query(self):
-        sql=self.query.replace('\t','').replace('AND ','').replace(',','').split('\n')
+        
+        sql=self.query.replace('SELECT','SELECT\n').replace('FROM','FROM\n').replace('WHERE','WHERE\n').replace('GROUP BY','GROUP BY\n').replace('ORDER BY',
+        'ORDER BY\n').replace('\t','').replace('AND ','').replace(',','').split('\n')
         for x in range(len(sql)):
             sql[x]=sql[x].lstrip()
         sql_query_list=[]
@@ -255,10 +257,10 @@ def display(plan,nodes,level=0):
     #print(plan['Node Type'] + '|', end='')
     node['Node Type'] = plan['Node Type']
     if 'Join Type' in plan:# Loop/Join
-        #print(plan['Join Type'] + ' ', end='')
+        print(plan['Join Type'] + ' ', end='')
         node["Join Type"] = plan['Join Type']
         if 'Join Filter' in plan:
-            node['Join Filter']=plan['Join Filter']    
+            node['Join Filter']=process_cond(plan['Join Filter'])    
 
     
     #explore(plan) # trying to find interesting keys
@@ -303,7 +305,7 @@ def display(plan,nodes,level=0):
     if 'Alias' in plan:
         #print("AS " + plan['Alias'], end='')
         node['Alias']=plan['Alias']
-    print()
+    #print()
     nodes.append(node)
     #print(nodes)
     if 'Plans' in plan:

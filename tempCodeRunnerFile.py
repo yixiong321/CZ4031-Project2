@@ -1,1 +1,1 @@
-or line.query_term in node[term]
+subquery

@@ -9,7 +9,7 @@ from blockdiag import parser, builder, drawer
 from annotation import *
 from preprocessing import *
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-
+import sqlparse
 SQL_QUERIES = [
     ["Select * from orders, customer where c_custkey = o_custkey and c_name = 'Cheng' ORDER BY c_phone"],
     ["Select l_returnflag,l_linestatus,sum(l_quantity) as sum_qty,sum(l_extendedprice) as sum_base_price,sum(l_extendedprice * (1-l_discount)) as sum_disc_price,sum(l_extendedprice * (1-l_discount) * (1+l_tax)) as sum_charge,avg(l_quantity) as avg_qty,avg(l_extendedprice) as avg_price,avg(l_discount) as avg_disc,count(*) as count_order from lineitem group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus"]
@@ -97,19 +97,22 @@ class MainWindow(QMainWindow):
 
             block_diag_relations=[]
             # Formats query
-            sqlquery = Query(QueryFromGUI).get_query() 
+            
             # Getting query plan
-            node_types,res,self.query_plans=fetch_QEP(self.c_r,sqlquery,self.query_plans,self.node_types_d)
+            node_types,res,self.query_plans=fetch_QEP(self.c_r,QueryFromGUI,self.query_plans,self.node_types_d)
+            
             block_diag_relations.append(res)
             # fetching AQPS
             if len(node_types) > 1:
-                self.query_plans,self.block_diag_relations = fetch_AQPS(self.c_r,node_types.keys(),sqlquery,self.query_plans,block_diag_relations)
+                self.query_plans,self.block_diag_relations = fetch_AQPS(self.c_r,node_types.keys(),QueryFromGUI,self.query_plans,block_diag_relations)
             # query_plans stores list of plans , [QEP, 'rest of AQPs']
             # aqp_relations stores list of string input for blockdiags for AQPs
         
-            mapping = get_mapping(self.query_plans,sqlquery)
+            mapping = get_mapping(self.query_plans,QueryFromGUI)
             for i in mapping:
+                print()
                 i.print_sql_query_list()
+                
             #print("Total number of query plans: "+str(len(self.query_plans))) 
             #print(len(mapping))
             
@@ -152,7 +155,7 @@ class MainWindow(QMainWindow):
                 self.AddToTab(tab1, groupbox)
                 self.AddToTab(tab1, BUTTON)
                 tab1.setLayout(tab1.layout)
-
+                # tabs are being added also during 2nd execution of query
                 if loop_v == 0:
                     self.tW.addTab(tab1, "QEP")
                 else:
