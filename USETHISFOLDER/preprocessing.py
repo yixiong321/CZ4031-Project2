@@ -28,19 +28,34 @@ def get_nodelist(level, lis):
             get_nodelist(p, lis)
     return lis
 
-def conversion_for_blockdiag(layer, counter):
-    counter += 1
-    #stopping condition
-    if "Plans" not in layer:
-        return ["'" + str(counter) + ")" + layer['Node Type'] + "';"]
+def convert(node,dic):
+    # stopping cond, no more plans reach end of branch
+    if "Plans" not in node:
+        id = max(dic.keys())+1
+        if 'Alias'in node:
+            label = str(id)+"[label='"+node['Node Type']+"\n ("+node['Alias']+")'];\n"
+        else:
+            label = str(id)+"[label='"+node['Node Type']+"'];\n"
+        dic[id]=label
+        return dic,[str(id)+";"]
     else:
-        str_list = []
-        for x in range(len(layer['Plans'])):
-            s="'" + str(counter) + ")" + layer['Node Type'] + "' " + leftArrow
-            for rel in conversion_for_blockdiag(layer["Plans"][x], counter):
-                str_list.append(s+ rel)
+        str_list=[]
+        if dic.keys():
+            id = max(dic.keys())+1
+        else:
+            id=0
+        for x in range(len(node['Plans'])):
 
-        return str_list
+            if 'Alias'in node:
+                label = str(id)+"[label='"+node['Node Type']+"\n ("+node['Alias']+")'];\n"
+            else:
+                label = str(id)+"[label='"+node['Node Type']+"'];\n"
+            dic[id]=label
+            s=str(id)+leftArrow
+            dic,rels=convert(node['Plans'][x],dic)
+            for rel in rels:
+                str_list.append(s+rel)
+        return dic,str_list
 
 def fetch_AQPS(cur, node_types, sqlquery, query_plans,relations_list):
         counter=1
@@ -62,13 +77,18 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans,relations_list):
                     #aqp_nodes = get_nodelist(root,new_d)
                     #print(aqp_nodes)
                     counter = 0
-                    res = conversion_for_blockdiag(root,counter)
+                    dic={}
+                    dic,res = convert(root,dic)
+                    label_string=''
+                    for x in dic.values():
+                        label_string=label_string+x
                     #print(res)
+                    res.insert(0,label_string)
                     relations_list.append(res)
         return query_plans,relations_list
 
 def fetch_QEP(cur,query, query_plans, node_types_d):
-    
+    string=''
     query=Query(query)
     cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + query.get_query())
     rows = cur.fetchall()
@@ -77,8 +97,14 @@ def fetch_QEP(cur,query, query_plans, node_types_d):
     for x in res[0][0]:
         query_plans['0']=x
         node_types = get_unique_node_types_dic(x['Plan'], node_types_d)
-        counter = 0
-        res = conversion_for_blockdiag(x['Plan'], counter)
+        dic = {}
+        dic,res= convert(x['Plan'],dic)
+        label_string=''
+        for x in dic.values():
+            label_string=label_string+x
+        #print(dic)
+        #print(res)
+        res.insert(0,label_string)
     return node_types, res ,query_plans
 
 rightArrow=" -> "
@@ -284,7 +310,7 @@ def display(plan,nodes,level=0):
     #print(plan['Node Type'] + '|', end='')
     node['Node Type'] = plan['Node Type']
     if 'Join Type' in plan:# Loop/Join
-        print(plan['Join Type'] + ' ', end='')
+        #print(plan['Join Type'] + ' ', end='')
         node["Join Type"] = plan['Join Type']
         if 'Join Filter' in plan:
             node['Join Filter']=process_cond(plan['Join Filter'])    

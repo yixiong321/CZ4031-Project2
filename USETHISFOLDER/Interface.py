@@ -93,12 +93,11 @@ class MainWindow(QMainWindow):
 
     #Display diagram button
     def displayDiag(self, number):
-
-        diag_string = self.query_plans[number]
-
-        print(diag_string)
-
-        diag_string = "blockdiag {orientation = portrait" + str(diag_string) + "}"
+        inner =""
+        for i in self.block_diag_relations[number]:
+            inner=inner+i+'\n'
+        #print(inner)
+        diag_string = "blockdiag {orientation = portrait;\n" + inner + "}"
 
         print(diag_string)
 
