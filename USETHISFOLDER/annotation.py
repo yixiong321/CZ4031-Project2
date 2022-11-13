@@ -314,7 +314,7 @@ def print_list(list):
 
 
 # Find full information on the node
-def find_node_info(node_type, query_plan):
+def find_node_info(node_type, query_plan, node_info):
     if 'Plan' in query_plan:
         # print(query_plan['Plan']['Node Type'])
         # print("ok finding info")

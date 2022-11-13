@@ -220,8 +220,10 @@ class MainWindow(QMainWindow):
                 groupbox.setLayout(vbox)
                 TEXT = QTextEdit()
                 TEXT.setReadOnly(True)
-
-                test = traverse_qep(self.query_plans[loop_v], "")
+                
+                aqplist = list(self.query_plans.values())
+                print(aqplist)
+                test = traverse_qep(self.query_plans[loop_v], aqplist,"")
 
                 # print(test)
                 TEXT.setText(test)
