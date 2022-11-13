@@ -217,8 +217,10 @@ def hash_join_ann(qep, aqps):
 # Hash
 def hash_ann(plan):
     node_info = find_node_info('Index Scan', plan, [])
-    table = node_info[0]['Alias']
-    return f"""The Hash operation is performed here because the table '{table}' is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
+    if node_info:
+        table = node_info['Alias']
+        return f"""The Hash operation is performed here because the table '{table}' is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
+    return f"""The Hash operation is performed here because the table is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
 
 
 # Sort
