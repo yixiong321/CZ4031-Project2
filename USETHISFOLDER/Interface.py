@@ -403,8 +403,14 @@ class UI_MainWindow(object):
             loop_v = 0
             for x in range(1, len(list(self.query_plans.values())[1:]) + 1):
 
+ 
                 tab1 = QtWidgets.QWidget()
                 tab1.layout = QVBoxLayout()
+
+
+                new_layout = QHBoxLayout()
+
+
                 groupbox = QGroupBox("Annotation")
                 groupbox.setObjectName = "Annotation"
                 vbox = QVBoxLayout()
@@ -414,9 +420,10 @@ class UI_MainWindow(object):
 
                 aqplist = list(self.query_plans.values())
 
-                # Obtaining annotations
+                print(self.query_plans['0'])
+                print([aqplist[x]])
                 test = traverse_qep(self.query_plans['0'], [aqplist[x]], "")
-                test = test + compare_plans(self.query_plans['0'], aqplist[x])
+
                 print(test)
 
                 TEXT.setText(test)
@@ -424,13 +431,19 @@ class UI_MainWindow(object):
 
                 BUTTON2 = QPushButton("Display Mapping")
 
-                BUTTON = QPushButton("Display Physical Query Plan")
+                BUTTON = QPushButton("Display QEP")
+
+                BUTTON3 = QPushButton("Display AQP " +  str(x))
 
                 BUTTON.clicked.connect(partial(self.displayDiag, loop_v))
                 BUTTON2.clicked.connect(self.DisplayTable)
+
+                BUTTON3.clicked.connect(partial(self.displayDiag, loop_v + 1))
+
                 vbox.addWidget(TEXT)
                 self.AddToTab(tab1, groupbox)
                 self.AddToTab(tab1, BUTTON)
+                self.AddToTab(tab1, BUTTON3)
                 self.AddToTab(tab1, BUTTON2)
 
                 tab1.setLayout(tab1.layout)
@@ -441,7 +454,6 @@ class UI_MainWindow(object):
                     self.tW.addTab(tab1, "QEP vs AQP" + str(x))
 
                 loop_v += 1
-
 
         except (Exception, psycopg2.DatabaseError) as error:
             print(error)
