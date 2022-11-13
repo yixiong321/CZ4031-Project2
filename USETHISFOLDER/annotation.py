@@ -47,6 +47,8 @@ def format(string):
         string = string.replace('PARTIAL ', '')
     if '::bpchar' in string:
         string = string.replace('::bpchar', '')
+    if '::text' in string:
+        string = string.replace('::text', '')
     
     return string
 
@@ -57,46 +59,22 @@ def seq_scan_ann(plan):
     if 'Filter' in plan:
         cond = plan['Filter']
         condd = format(cond)
-        return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple. Tuples that do not satisfy {condd} are removed from the output.\n"""
-    return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple.\n"""
+        return f"""The Sequential Scan operation is performed here because there is no index created on the table '{plan['Alias']}', hence the only way is to go through the table tuple by tuple. Tuples that do not satisfy {condd} are removed from the output.\n"""
+    return f"""The Sequential Scan operation is performed here because there is no index created on the table '{plan['Alias']}', hence the only way is to go through the table tuple by tuple.\n"""
 
 
 # Index Scan
 def index_scan_ann(qep, aqps):
-    other_scans = ['Seq Scan', 'Bitmap Index Scan']
-    scans_found = []
-    scan_to_cost = {}
     index_scan_cost = qep['Total Cost']
-    for plan in aqps:
-        for scan in other_scans:
-            print(f'Finding {scan}\n')
-            scan_infos = find_node_info(scan, plan, [])
-            if scan_infos is not None:
-                for scan_info in scan_infos:
-                    if 'Alias' in scan_info:
-                        if scan_info['Alias'] == qep['Alias']:
-                            scan_cost = scan_info['Total Cost']
-                            diff = round(scan_cost - index_scan_cost, 2)
-                            scan_to_cost[scan] = diff
-                            scans_found.append(scan)
-                            # print("scans_found: " + str(scans_found))
-                    else:
-                        if scan_info['Index Name'] == qep['Index Name']:
-                            scan_cost = scan_info['Total Cost']
-                            diff = round(scan_cost - index_scan_cost, 2) # is dividing better??
-                            print(f"diff in cost for {scan_info['Node Type']} is {diff}")
-                            scan_to_cost[scan] = diff
-                            scans_found.append(scan)
-                            # print("scans_found: " + str(scans_found))
-    print("scans found list is " + str(len(scans_found)))
+    scan_to_cost = compare_costs(qep, index_scan_cost, aqps)
     
-    if len(scans_found) > 0:
+    if len(scan_to_cost) > 0:
         ann = f"""The Index Scan operation is performed here because there is an index {qep['Index Name']} on the table {qep['Relation Name']} and an index scan has lower cost compared to a """
         s = 1
         for scan in scan_to_cost:
             ann = ann + scan + " operation which is " + str(scan_to_cost[scan]) + " more costly"
             s+=1
-            if s == len(scans_found):
+            if s == len(scan_to_cost):
                 ann = ann + " and a "
         return ann + '\n'
     
@@ -157,16 +135,7 @@ def merge_join_ann(qep, aqps):
     
     # Calculating cost differences in joins
     merge_join_cost = qep['Total Cost']
-    join_to_cost = {}
-    for plan in aqps:
-        # print("\n ok new plan")
-        join_infos = find_node_info('Hash Join', plan, [])
-        for join_info in join_infos:
-            if join_info['Hash Cond'] == cond:
-                join_cost = join_info['Total Cost']
-                diff = round(join_cost - merge_join_cost, 2)
-                join_to_cost[join_info['Node Type']] = diff
-    
+    join_to_cost = compare_costs(qep, merge_join_cost, aqps)
     return f"""The Merge Join operation is performed here because both tables are sorted and the join clause is '=' as in {condd}. Both sides of the join are also large at {row1} and {row2} rows. Merge join is {join_to_cost['Hash Join']} less costly than a hash join.\n"""
 
 
@@ -185,24 +154,9 @@ def hash_join_ann(qep, aqps):
             row2 = child['Actual Rows']
     
     # Compare costs with Nested Loop and Merge Join (if any)
-    other_joins = ['Nested Loop', 'Merge Join']
-    joins_found = []
-    join_to_cost = {}
     hash_join_cost = qep['Total Cost']
-    for plan in aqps:
-        for join in other_joins:
-            print(f'\nFinding {join}')
-            join_infos = find_node_info(join, plan, [])
-            if join_infos is not None:
-                for join_info in join_infos:
-                    if join_info['Output'] == qep['Output']:
-                        join_cost = join_info['Total Cost']
-                        diff = round(join_cost - hash_join_cost, 2)
-                        join_to_cost[join] = diff
-                        joins_found.append(join)
-                        # print("scans_found: " + str(joins_found))
-    print("joins found list is " + str(len(joins_found)))
-    if len(joins_found) > 0:
+    join_to_cost = compare_costs(qep, hash_join_cost, aqps)
+    if len(join_to_cost) > 0:
         ann = f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem). """
         for join in join_to_cost:
             ann = ann + f"{join} is more costly by {join_to_cost[join]}. "
@@ -314,52 +268,112 @@ def print_list(list):
         print(element)
         print()
 
+def compare_costs(qep, cost, aqps):
+    if qep['Node Type'] == 'Index Scan':
+        other_scans = ['Seq Scan', 'Bitmap Index Scan']
+        scans_found = []
+        scan_to_cost = {}
+        for plan in aqps:
+            for scan in other_scans:
+                print(f'Finding {scan}\n')
+                scan_infos = find_node_info(scan, plan, [])
+                if scan_infos is not None:
+                    for scan_info in scan_infos:
+                        if 'Alias' in scan_info:
+                            if scan_info['Alias'] == qep['Alias']:
+                                scan_cost = scan_info['Total Cost']
+                                diff = round(scan_cost - cost, 2)
+                                scan_to_cost[scan] = diff
+                                scans_found.append(scan)
+                                # print("scans_found: " + str(scans_found))
+                        else:
+                            if scan_info['Index Name'] == qep['Index Name']:
+                                scan_cost = scan_info['Total Cost']
+                                diff = round(scan_cost - cost, 2) # is dividing better??
+                                print(f"diff in cost for {scan_info['Node Type']} is {diff}")
+                                scan_to_cost[scan] = diff
+                                scans_found.append(scan)
+                                # print("scans_found: " + str(scans_found))
+        return scan_to_cost
+    elif qep['Node Type'] == 'Merge Join':
+        join_to_cost = {}
+        for plan in aqps:
+            join_infos = find_node_info('Hash Join', plan, [])
+            for join_info in join_infos:
+                if join_info['Hash Cond'] == qep['Merge Cond']:
+                    join_cost = join_info['Total Cost']
+                    diff = round(join_cost - cost, 2)
+                    join_to_cost[join_info['Node Type']] = diff
+        return join_to_cost
+    else:
+        other_joins = ['Nested Loop', 'Merge Join']
+        joins_found = []
+        join_to_cost = {}
+        for plan in aqps:
+            for join in other_joins:
+                print(f'\nFinding {join}')
+                join_infos = find_node_info(join, plan, [])
+                if join_infos is not None:
+                    for join_info in join_infos:
+                        if join_info['Output'] == qep['Output']:
+                            join_cost = join_info['Total Cost']
+                            diff = round(join_cost - cost, 2)
+                            join_to_cost[join] = diff
+                            joins_found.append(join)
+                            # print("scans_found: " + str(joins_found))
+        return join_to_cost
+
+# Compare overall costs of plans
+def compare_plans(plans):
+    plans_dict = {}
+    plans_dict['qep'] = plans[0]['Plan']['Total Cost']
+    x = 1
+    for plan in plans[1:]:
+        key = 'aqp ' + str(x)
+        plans_dict[key] = plan['Plan']['Total Cost']
+        x+=1
+    compare_ann = ""
+    for key in plans_dict:
+        compare_ann+= f"\n{key} costs {plans_dict[key]}."
+    return compare_ann
 
 # Find full information on the node
 def find_node_info(node_type, query_plan, node_info):
     if 'Plan' in query_plan:
-        # print(query_plan['Plan']['Node Type'])
-        # print("ok finding info")
         if query_plan['Plan']['Node Type'] == node_type:
-            # print("found it in first node!")
             node_info.append(query_plan['Plan'])
         else:
-            # print("going into next Plans")
             node_info = find_node_info(node_type, query_plan['Plan']['Plans'], node_info)
             print("plan traversed. found " + str(len(node_info)) + " node_info")
     else:
         if type(query_plan) is not dict:
             for x in query_plan:
-                # print(x)
-                # print(x['Node Type'])
                 if x['Node Type'] == node_type:
-                    # print(f"found it! returning {x['Node Type']}")
                     node_info.append(x)
-                    # print(node_info)
                 if 'Plans' not in x:
-                    # print("continuing to node beside")
                     continue
                 else:
-                    # print("going into next Plans")
                     node_info = find_node_info(node_type, x['Plans'], node_info)
-                    # print(f"breaking for loop, goodbye {x['Node Type']}")
-                    # break
         else:
-            # print(query_plan['Node Type'])
             if query_plan['Node Type'] == node_type:
-                # print(f"found it! returning {query_plan['Node Type']}")
                 node_info.append(query_plan)
-                # print(node_info)
-            # print("going into next Plans")
             node_info = find_node_info(node_type, query_plan['Plans'], node_info)
-            # print(f"goodbye {query_plan['Node Type']}")
-    
-    # if len(node_info) > 0:
-    #     print( f"node returned {node_info[len(node_info) - 1]['Node Type']}" )
-    #     print("node_info length: " + str(len(node_info)))
-    # else:
-    #     print("no node info")
+            
     return node_info
+
+def compare_plans(plans):
+    plans_dict = {}
+    plans_dict['qep'] = plans[0]['Plan']['Total Cost']
+    x = 1
+    for plan in plans[1:]:
+        key = 'aqp ' + str(x)
+        plans_dict[key] = plan['Plan']['Total Cost']
+        x+=1
+    compare_ann = ""
+    for key in plans_dict:
+        compare_ann+= f"\n{key} costs {plans_dict[key]}."
+    return compare_ann
+
 
 # Annotates according to the nodes found in the qep
 def traverse_qep(qep, aqps, string_v):
@@ -476,8 +490,8 @@ def traverse_qep(qep, aqps, string_v):
             continue
         # a += 1
 
-    print("|||||||||||||||||||||||")
-    print(string_v)
+    # print("|||||||||||||||||||||||")
+    # print(string_v)
 
     return string_v
 
