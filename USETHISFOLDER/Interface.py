@@ -339,7 +339,7 @@ class UI_MainWindow(object):
 
     # Display diagram button
     def displayDiag(self, number):
-
+        print(number,self.block_diag_relations[number])
         inner = ""
         for i in self.block_diag_relations[number]:
             inner = inner + i + '\n'
@@ -388,22 +388,21 @@ class UI_MainWindow(object):
             self.query_plans = {}
             #
 
-            block_diag_relations = []
+            self.block_diag_relations = []
             # Formats query
 
             # Getting query plan
             node_types, res, self.query_plans = fetch_QEP(self.c_r, QueryFromGUI, self.query_plans, self.node_types_d)
 
-            block_diag_relations.append(res)
+            self.block_diag_relations.append(res)
             # fetching AQPS
 
             self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types, QueryFromGUI,
-                                                                     self.query_plans, block_diag_relations)
+                                                                     self.query_plans, self.block_diag_relations)
 
+            print(len(self.block_diag_relations))
             loop_v = 0
             for x in range(1, len(list(self.query_plans.values())[1:]) + 1):
-
- 
                 tab1 = QtWidgets.QWidget()
                 tab1.layout = QVBoxLayout()
 
@@ -422,7 +421,6 @@ class UI_MainWindow(object):
                 print("1st test done")
                 test = test + compare_plans(self.query_plans['0'], aqplist[x])
 
-                print(test)
 
                 TEXT.setText(test)
 
@@ -433,10 +431,10 @@ class UI_MainWindow(object):
 
                 BUTTON3 = QPushButton("Display AQP " +  str(x))
 
-                BUTTON.clicked.connect(partial(self.displayDiag, loop_v))
+                BUTTON.clicked.connect(partial(self.displayDiag, 0))
                 BUTTON2.clicked.connect(self.DisplayTable)
-
-                BUTTON3.clicked.connect(partial(self.displayDiag, loop_v + 1))
+                print(x)
+                BUTTON3.clicked.connect(partial(self.displayDiag, x))
 
                 vbox.addWidget(TEXT)
                 self.AddToTab(tab1, groupbox)

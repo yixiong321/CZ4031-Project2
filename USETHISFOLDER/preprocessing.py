@@ -67,6 +67,7 @@ def convert(node, dic):
 def fetch_AQPS(cur, node_types, sqlquery, query_plans, relations_list):
     counter = 1
     sqlquery = Query(sqlquery)
+    okay={'0':list(node_types)}
     for key in node_types.keys():
         if key in node_types_dict:
             cur.execute("SET LOCAL " + node_types_dict[key] + " TO OFF")
@@ -77,24 +78,27 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans, relations_list):
             for x in res[0][0]:
                 if x not in query_plans.values():
                     ok={}
-                    #print(node_types)
+                    print(node_types)
                     unique=get_unique_node_types_dic(x['Plan'],ok)
-                    #print(unique)
-                    if unique != node_types:
+                    print(unique)
+                    if list(unique) not in okay.values():
+                        print('here')
                         query_plans[counter] = x
+                        okay[counter]=list(unique)
                         counter += 1
-                root = x['Plan']
-                # aqp_nodes = get_nodelist(root,new_d)
-                # print(aqp_nodes)
-                counter = 0
-                dic = {}
-                dic, res = convert(root, dic)
-                label_string = ''
-                for x in dic.values():
-                    label_string = label_string + x
-                # print(res)
-                res.insert(0, label_string)
-                relations_list.append(res)
+                        root = x['Plan']
+                        # aqp_nodes = get_nodelist(root,new_d)
+                        # print(aqp_nodes)
+                        dic = {}
+                        dic, res = convert(root, dic)
+                        label_string = ''
+                        for x in dic.values():
+                            label_string = label_string + x
+                        # print(res)
+                        res.insert(0, label_string)
+                        relations_list.append(res)
+    
+    print(len(query_plans),len(relations_list))
     return query_plans, relations_list
 
 
