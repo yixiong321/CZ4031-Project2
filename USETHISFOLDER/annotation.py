@@ -460,11 +460,11 @@ def traverse_qep(qep, aqps, string_v):
 
     return string_v
 
-def generate_table(mapping):
+def generate_table(i):
     #This gets all the query terms of a query 'i'
-    # qtlist = i.return_query_terms_list()
-    # nodelinelist = i.return_node_line()
-    # print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
+    qtlist = i.return_query_terms_list()
+    nodelinelist = i.return_node_line()
+    print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
     #print(tabulate(qtlist, tablefmt="grid"))
 
     head = ['Line No.', 'Query Terms', 'QEP']
@@ -472,6 +472,7 @@ def generate_table(mapping):
     for i in range(AEP_counter):
         head.append('AEP' + str(i+1))
     
+    print(head)
     qtlist = mapping[0].return_query_terms_list()
     nodelinelist = mapping[0].return_node_line()
 
@@ -483,9 +484,14 @@ def generate_table(mapping):
         table[count][0] = nodelinelist[count][0] #line number
         table[count][1] = j #query term
         count+=1
-    
+
+    return table
+
+
     for i in range(2,2+len(mapping),1):
         nodelinelist = mapping[i-2].return_node_line()
+        print(i)
+        print(nodelinelist)
 
         count = 0
         for j in qtlist:
@@ -493,10 +499,6 @@ def generate_table(mapping):
             count+=1
     
     print(tabulate(table, headers=head, tablefmt="grid"))
-
-    return table
-
-    
 
 
 
