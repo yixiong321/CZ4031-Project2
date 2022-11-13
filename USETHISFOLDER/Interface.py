@@ -268,26 +268,55 @@ class MainWindow(QMainWindow):
         mapping = get_mapping(self.query_plans,self.txt_sql.toPlainText())
 
         self.data = {
-                'Line No.':[],
                 'Query Term': [],
                 'QEP': []}
 
+        AEP_counter = len(mapping)
+        for i in range(AEP_counter-1):
+            self.data['AEP'+str(i+1)] = []
+            
+        print(self.data)
+
         ammount_of_c = 0
 
-        value = generate_table(mapping[self.tW.currentIndex()])
+        # value = generate_table(mapping[self.tW.currentIndex()])
+        value = generate_table(mapping)
+        # print(value.get_query()
 
-      #  print(value.get_query()
-
-        print(value)
+        #print(value)
 
         for x in value:
 
             self.data["Query Term"].append(str(x[1]))
 
             if str(x[2]) == "None" :
-                self.data["Node Type"].append("~")
+                self.data["QEP"].append("~")
             else:
-                self.data["Node Type"].append(str(x[2]))
+                self.data["QEP"].append(str(x[2]))
+            
+            if "AEP1" in self.data:
+                if str(x[3]) == "None" :
+                    self.data["AEP1"].append("~")
+                else:
+                    self.data["AEP1"].append(str(x[3]))
+
+            if "AEP2" in self.data:
+                if str(x[4]) == "None" :
+                    self.data["AEP2"].append("~")
+                else:
+                    self.data["AEP2"].append(str(x[4]))
+
+            if "AEP3" in self.data:
+                if str(x[5]) == "None" :
+                    self.data["AEP3"].append("~")
+                else:
+                    self.data["AEP3"].append(str(x[5]))
+            
+            if "AEP4" in self.data:
+                if str(x[6]) == "None" :
+                    self.data["AEP3"].append("~")
+                else:
+                    self.data["AEP3"].append(str(x[6]))
 
             ammount_of_c += 1
 
@@ -301,7 +330,7 @@ class MainWindow(QMainWindow):
 
         horHeaders = []
 
-        for n, key in enumerate(sorted(self.data.keys())):
+        for n, key in enumerate((self.data.keys())):
             horHeaders.append(key)
             for m, item in enumerate(self.data[key]):
                 newitem = QTableWidgetItem(item)

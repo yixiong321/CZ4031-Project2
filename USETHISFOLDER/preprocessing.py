@@ -259,7 +259,7 @@ class line():
             if 'Node Type' in key:
                 return value
             else:
-                return "-"
+                return "~"
 
     def return_lineno(self):
         return self.line_number
