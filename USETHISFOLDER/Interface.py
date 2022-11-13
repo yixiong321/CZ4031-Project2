@@ -414,10 +414,9 @@ class UI_MainWindow(object):
 
                 aqplist = list(self.query_plans.values())
 
-                print(self.query_plans['0'])
-                print([aqplist[x]])
+                # Obtaining annotations
                 test = traverse_qep(self.query_plans['0'], [aqplist[x]], "")
-
+                test = test + compare_plans(self.query_plans['0'], aqplist[x])
                 print(test)
 
                 TEXT.setText(test)

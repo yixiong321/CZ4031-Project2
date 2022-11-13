@@ -323,20 +323,6 @@ def compare_costs(qep, cost, aqps):
                             # print("scans_found: " + str(joins_found))
         return join_to_cost
 
-# Compare overall costs of plans
-def compare_plans(plans):
-    plans_dict = {}
-    plans_dict['qep'] = plans[0]['Plan']['Total Cost']
-    x = 1
-    for plan in plans[1:]:
-        key = 'aqp ' + str(x)
-        plans_dict[key] = plan['Plan']['Total Cost']
-        x+=1
-    compare_ann = ""
-    for key in plans_dict:
-        compare_ann+= f"\n{key} costs {plans_dict[key]}."
-    return compare_ann
-
 # Find full information on the node
 def find_node_info(node_type, query_plan, node_info):
     if 'Plan' in query_plan:
@@ -361,26 +347,19 @@ def find_node_info(node_type, query_plan, node_info):
             
     return node_info
 
-def compare_plans(plans):
-    plans_dict = {}
-    plans_dict['qep'] = plans[0]['Plan']['Total Cost']
-    x = 1
-    for plan in plans[1:]:
-        key = 'aqp ' + str(x)
-        plans_dict[key] = plan['Plan']['Total Cost']
-        x+=1
-    compare_ann = ""
-    for key in plans_dict:
-        compare_ann+= f"\n{key} costs {plans_dict[key]}."
-    return compare_ann
+# Compare overall costs of plans
+def compare_plans(qep, aqp):
+    qep_cost = round(qep['Plan']['Total Cost'],1)
+    aqp_cost = round(aqp['Plan']['Total Cost'],1)
+    cost_diff = round(aqp_cost - qep_cost, 1)
+    qep_time = round(qep['Execution Time'],1)
+    aqp_time = round(aqp['Execution Time'],1)
+    time_diff = round(aqp_time - qep_time, 1)
+    compare_ann = f"\nQEP costs {qep_cost} and AQP costs {aqp_cost}. The cost difference is {cost_diff}.\nQEP took {qep_time}ms and AQP took {aqp_time}ms. The time difference is {time_diff}ms."
 
 
 # Annotates according to the nodes found in the qep
 def traverse_qep(qep, aqps, string_v):
-    print("inside traverse")
-    print(string_v)
-
-
     if 'Plan' in qep:
         x = qep['Plan']
         node = x['Node Type']
