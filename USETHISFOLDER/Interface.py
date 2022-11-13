@@ -397,7 +397,7 @@ class UI_MainWindow(object):
             block_diag_relations.append(res)
             # fetching AQPS
 
-            self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types.keys(), QueryFromGUI,
+            self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types, QueryFromGUI,
                                                                      self.query_plans, block_diag_relations)
 
             loop_v = 0

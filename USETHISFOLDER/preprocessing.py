@@ -67,10 +67,8 @@ def convert(node, dic):
 def fetch_AQPS(cur, node_types, sqlquery, query_plans, relations_list):
     counter = 1
     sqlquery = Query(sqlquery)
-    for key in node_types:
+    for key in node_types.keys():
         if key in node_types_dict:
-            
-
             cur.execute("SET LOCAL " + node_types_dict[key] + " TO OFF")
             cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery.get_query())
             rows = cur.fetchall()
@@ -78,8 +76,13 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans, relations_list):
             res = json.loads(res)
             for x in res[0][0]:
                 if x not in query_plans.values():
-                    query_plans[counter] = x
-                    counter += 1
+                    ok={}
+                    #print(node_types)
+                    unique=get_unique_node_types_dic(x['Plan'],ok)
+                    #print(unique)
+                    if unique != node_types:
+                        query_plans[counter] = x
+                        counter += 1
                 root = x['Plan']
                 # aqp_nodes = get_nodelist(root,new_d)
                 # print(aqp_nodes)
