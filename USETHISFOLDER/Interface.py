@@ -65,7 +65,8 @@ class MainWindow(QMainWindow):
                 host=self.ip_address.text(),
                 database= self.db_n.text(),
                 user= self.username.text(),
-                password= self.password.text())
+                password= self.password.text(),
+                port = self.port_address.text())
 
             self.status_d.setStyleSheet("color: green; font-weight: 600")
             self.status_d.setText("Connected!")
@@ -90,7 +91,8 @@ class MainWindow(QMainWindow):
             host=self.ip_address.text(),
             database=self.db_n.text(),
             user=self.username.text(),
-            password=self.password.text())
+            password=self.password.text(),
+            port = self.port_address.text())
 
     def TerminateConnectionToPostgreSQL(self):
         self.SQL_Connection.close()
