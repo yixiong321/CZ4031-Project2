@@ -153,16 +153,16 @@ def nl_join_ann(qep):
     row1 = 0
     row2 = 0
     for child in qep['Plans']:
-        print(child['Node Type'])
+        # print(child['Node Type'])
         if row1 == 0:
             row1 = child['Actual Rows']
         else:
             row2 = child['Actual Rows']
     # print(f"{row1} and {row2}")
-    return f"""The Nested Loop Join operation is performed here because one of the child nodes' output is significantly smaller than the other. In this case, one has {row1} rows and the other has {row2} rows.\n"""
+    return f"""The Nested Loop Join operation is performed here because one of the child node's output is significantly smaller than the other. In this case, one has {row1} rows and the other has {row2} rows.\n"""
 
 # Nested Loop Semi Join
-def nl_semi_join_ann(plan):
+def nl_semi_join_ann():
     return f"""The Nested Loop Semi Join operation is performed here because there is an EXISTS clause in the query that requires the outer rows to be filtered by the inner rows, returning the results of the outer rows only.\n"""
 
 # Merge Join
@@ -223,7 +223,7 @@ def hash_join_ann(qep, aqps):
                         join_to_cost[join] = diff
                         joins_found.append(join)
                         # print("scans_found: " + str(joins_found))
-    print("scans found list is " + str(len(joins_found)))
+    print("joins found list is " + str(len(joins_found)))
     if len(joins_found) > 0:
         ann = f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem). """
         for join in join_to_cost:
@@ -246,7 +246,7 @@ def sort_ann(plan):
     return f"""The Sort operation is performed here to sort according to {plan['Sort Key']}. The sorting is done by {plan['Sort Method']}."""
 
 # Incremental Sort
-def incremental_sort_ann(plan):
+def incremental_sort_ann():
     return f"""The Incremental Sort operation is performed here because it has a much lower cost due to the reduction in memory usage and the reduced likelihood of spilling the sorts into disk."""
 
 # Aggregate
@@ -278,43 +278,43 @@ def aggregate_ann(plan):
     return f"""The Aggregate operation is performed here because there is a calculation to be carried out in this query.\n"""
 
 # Hash Aggregate
-def hash_aggregate_ann(plan):
-    return f"""The Hash Aggregate operation is performed here because there is a GROUP BY clause in the query and the tables are unsorted."""
+def hash_aggregate_ann():
+    return f"""The Hash Aggregate operation is performed here because there is a GROUP BY clause in the query and the tables are unsorted.\n"""
 
 # Group Aggregate
-def group_aggregate_ann(plan):
-    return f"""The Group Aggregate operation is performed here because there is a GROUP BY clause and the tables are sorted."""
+def group_aggregate_ann():
+    return f"""The Group Aggregate operation is performed here because there is a GROUP BY clause and the tables are sorted.\n"""
 
 # Limit
-def limit_ann(plan):
-    return f"""The Limit operation is performed here because there is a LIMIT/OFFSET clause in the SELECT query."""
+def limit_ann():
+    return f"""The Limit operation is performed here because there is a LIMIT/OFFSET clause in the SELECT query.\n"""
 
 # Unique
-def unique_ann(plan):
+def unique_ann():
     # TODO: iterate through aqps and find HashAggregate or GroupAggregate to compare costs
-    return f"""The Unique operation is performed here because the query requires a distinct value to be take from the result and it has a lower cost than Hash Aggregate and Group Aggregate."""
+    return f"""The Unique operation is performed here because the query requires a distinct value to be take from the result and it has a lower cost than Hash Aggregate and Group Aggregate.\n"""
 
 # Append
-def append_ann(plan):
-    return f"""The Append operation is performed here because multiple results are combined into one."""
+def append_ann():
+    return f"""The Append operation is performed here because multiple results are combined into one.\n"""
 
 # Gather (actually no idea why this is used, can remove?)
 def gather_ann(plan):
-    return f"""The Gather function is performed here because there are {plan['Workers Launched']} workers launched in child nodes and the data output from these workers need to be combined."""
+    return f"""The Gather function is performed here because there are {plan['Workers Launched']} workers launched in child nodes and the data output from these workers need to be combined.\n"""
 
 # Gather Merge
-def gather_merge_ann(plan):
-    return f"""The Gather Merge operation is performed here because the data is sorted and the there is a need to combine the output of the child nodes."""
+def gather_merge_ann():
+    return f"""The Gather Merge operation is performed here because the data is sorted and the there is a need to combine the output of the child nodes.\n"""
 
 # Materialize
 def materialize_ann(plan):
-    # TODO: find child node's number of rows
-    return f"""The Materialize operation is performed here because there are only a few tuples in the output of the child node so it materializes its output into memory before passing to the next node."""
+    rows = plan['Plans'][0]['Actual Rows']
+    return f"""The Materialize operation is performed here because there are only a few ({rows}) tuples in the output of the child node so it materializes its output into memory before passing to the next node.\n"""
 
 # Memoize
-def memoize_ann(plan):
-    # TODO: find child node's number of rows
-    return f"""The Memoize operation is performed here because there is enough available memory to cache the required rows that are have not been cached. It has a lower cost than Materialize because there are no I/O costs to the disk."""
+def memoize_ann():
+    # rows = plan['Plans'][0]['Actual Rows']
+    return f"""The Memoize operation is performed here because there is enough available memory to cache the required rows that are have not been cached. It has a lower cost than Materialize because there are no I/O costs to the disk.\n"""
 
 # referred to https://severalnines.com/blog/overview-various-auxiliary-plan-nodes-postgresql/
 

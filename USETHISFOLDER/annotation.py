@@ -37,28 +37,28 @@ def splitQuery(query):
     return list2
 
 def format(string):
-    if '(' in string:
-        string = string.replace('(', '')
-        string = string.replace(')', '')
+    if '(' == string[0]:
+        string = string[1:-1]
     if '::date' in string:
         string = string.replace('::date', '')
     if '::numeric' in string:
         string = string.replace('::numeric', '')
     if 'PARTIAL ' in string:
         string = string.replace('PARTIAL ', '')
+    if '::bpchar' in string:
+        string = string.replace('::bpchar', '')
+    
     return string
 
 # SCAN OPERATORS
 
 # Sequential Scan
 def seq_scan_ann(plan):
-    # TODO: if have 'Filter', say that it is done using the filter
     if 'Filter' in plan:
         cond = plan['Filter']
         condd = format(cond)
         return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple. Tuples that do not satisfy {condd} are removed from the output.\n"""
     return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple.\n"""
-    # return f"""The Sequential Scan operation is performed here because there is no index created on the table {plan['Alias']}, hence the only way is to go through the table tuple by tuple. \n"""
 
 
 # Index Scan
@@ -127,18 +127,18 @@ def nl_join_ann(plan):
     row1 = 0
     row2 = 0
     for child in plan['Plans']:
-        print(child['Node Type'])
+        # print(child['Node Type'])
         if row1 == 0:
             row1 = child['Actual Rows']
         else:
             row2 = child['Actual Rows']
     # print(f"{row1} and {row2}")
-    return f"""The Nested Loop Join operation is performed here because one of the child nodes' output is significantly smaller than the other. In this case, one has {row1} rows and the other has {row2} rows.\n"""
+    return f"""The Nested Loop Join operation is performed here because one of the child node's output is significantly smaller than the other. In this case, one has {row1} rows and the other has {row2} rows.\n"""
 
 
 # Nested Loop Semi Join
 def nl_semi_join_ann(plan):
-    return f"""The Nested Loop Semi Join operation is performed here because there is an EXISTS clause in the query that requires the outer rows to be filtered by the inner rows, returning the results of the outer rows only. \n"""
+    return f"""The Nested Loop Semi Join operation is performed here because there is an EXISTS clause in the query that requires the outer rows to be filtered by the inner rows, returning the results of the outer rows only.\n"""
 
 
 # Merge Join
@@ -201,7 +201,7 @@ def hash_join_ann(qep, aqps):
                         join_to_cost[join] = diff
                         joins_found.append(join)
                         # print("scans_found: " + str(joins_found))
-    print("scans found list is " + str(len(joins_found)))
+    print("joins found list is " + str(len(joins_found)))
     if len(joins_found) > 0:
         ann = f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem). """
         for join in join_to_cost:
@@ -212,7 +212,7 @@ def hash_join_ann(qep, aqps):
     return f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem).\n"""
 
 
-# Miscellaneous Operations
+# MISC OPERATORS
 
 # Hash
 def hash_ann(plan):
@@ -223,12 +223,12 @@ def hash_ann(plan):
 
 # Sort
 def sort_ann(plan):
-    return f"""The Sort operation is performed here to sort according to {plan['Sort Key']}. The sorting is done by {plan['Sort Method']}. \n"""
+    return f"""The Sort operation is performed here to sort according to {plan['Sort Key']}. The sorting is done by {plan['Sort Method']}.\n"""
 
 
 # Incremental Sort
-def incremental_sort_ann(plan):
-    return f"""The Incremental Sort operation is performed here because it has a much lower cost due to the reduction in memory usage and the likelihood of spilling the sorts into disk. \n"""
+def incremental_sort_ann():
+    return f"""The Incremental Sort operation is performed here because it has a much lower cost due to the reduction in memory usage and the likelihood of spilling the sorts into disk.\n"""
 
 
 # Aggregate
@@ -261,51 +261,50 @@ def aggregate_ann(plan):
 
 
 # Hash Aggregate
-def hash_aggregate_ann(plan):
-    return f"""The Hash Aggregate operation is performed here because there is a GROUP BY clause in the query and the tables are unsorted. \n"""
+def hash_aggregate_ann():
+    return f"""The Hash Aggregate operation is performed here because there is a GROUP BY clause in the query and the tables are unsorted.\n"""
 
 
 # Group Aggregate
-def group_aggregate_ann(plan):
-    return f"""The Group Aggregate operation is performed here because there is a GROUP BY clause and the tables are sorted. \n"""
+def group_aggregate_ann():
+    return f"""The Group Aggregate operation is performed here because there is a GROUP BY clause and the tables are sorted.\n"""
 
 
 # Limit
-def limit_ann(plan):
+def limit_ann():
     return f"""The Limit operation is performed here because there is a LIMIT/OFFSET clause in the SELECT query. \n"""
 
 
 # Unique
-def unique_ann(plan):
-    # TODO: iterate through aqps and find HashAggregate or GroupAggregate to compare costs
-    return f"""The Unique operation is performed here because the query requires a distinct value to be take from the result and it has a lower cost than Hash Aggregate and Group Aggregate. \n"""
+def unique_ann():
+    return f"""The Unique operation is performed here because the query requires a distinct value to be take from the result.\n"""
 
 
 # Append
-def append_ann(plan):
-    return f"""The Append operation is performed here because multiple results are combined into one. \n"""
+def append_ann():
+    return f"""The Append operation is performed here because multiple results are combined into one.\n"""
 
 
 # Gather (actually no idea why this is used, can remove?)
 def gather_ann(plan):
-    return f"""The Gather function is performed here because there are {plan['Workers Launched']} workers launched in child nodes and the data output from these workers need to be combined. \n"""
+    return f"""The Gather function is performed here because there are {plan['Workers Launched']} workers launched in child nodes and the data output from these workers need to be combined.\n"""
 
 
 # Gather Merge
-def gather_merge_ann(plan):
-    return f"""The Gather Merge operation is performed here because the data is sorted and the there is a need to combine the output of the child nodes. \n"""
+def gather_merge_ann():
+    return f"""The Gather Merge operation is performed here because the data is sorted and the there is a need to combine the output of the child nodes.\n"""
 
 
 # Materialize
 def materialize_ann(plan):
-    # TODO: find child node's number of rows
-    return f"""The Materialize operation is performed here because there are only a few tuples in the output of the child node so it materializes its output into memory before passing to the next node. \n"""
+    rows = plan['Plans'][0]['Actual Rows']
+    return f"""The Materialize operation is performed here because there are only a few ({rows}) tuples in the output of the child node so it materializes its output into memory before passing to the next node.\n"""
 
 
 # Memoize
-def memoize_ann(plan):
-    # TODO: find child node's number of rows
-    return f"""The Memoize operation is performed here because there is enough available memory to cache the required rows that are have not been cached. It has a lower cost than Materialize because there are no I/O costs to the disk. \n"""
+def memoize_ann():
+    # rows = plan['Plans'][0]['Actual Rows']
+    return f"""The Memoize operation is performed here because there is enough available memory to cache the required rows that are have not been cached. It has a lower cost than Materialize because there are no I/O costs to the disk.\n"""
 
 
 def print_list(list):
@@ -318,30 +317,49 @@ def print_list(list):
 def find_node_info(node_type, query_plan):
     if 'Plan' in query_plan:
         # print(query_plan['Plan']['Node Type'])
+        # print("ok finding info")
         if query_plan['Plan']['Node Type'] == node_type:
             # print("found it in first node!")
-            return query_plan['Plan']
-        else:
-            node_info = find_node_info(node_type, query_plan['Plan']['Plans'])
-            return node_info
-    for x in query_plan:
-        # print(x['Node Type'])
-        if x['Node Type'] == node_type:
-            # print("found it!")
-            return x
-        elif 'Plans' not in x:
-            # print("I'm in Plans not in x")
-            continue
+            node_info.append(query_plan['Plan'])
         else:
             # print("going into next Plans")
-            node_info = find_node_info(node_type, x['Plans'])
-            return node_info
+            node_info = find_node_info(node_type, query_plan['Plan']['Plans'], node_info)
+            print("plan traversed. found " + str(len(node_info)) + " node_info")
+    else:
+        if type(query_plan) is not dict:
+            for x in query_plan:
+                # print(x)
+                # print(x['Node Type'])
+                if x['Node Type'] == node_type:
+                    # print(f"found it! returning {x['Node Type']}")
+                    node_info.append(x)
+                    # print(node_info)
+                if 'Plans' not in x:
+                    # print("continuing to node beside")
+                    continue
+                else:
+                    # print("going into next Plans")
+                    node_info = find_node_info(node_type, x['Plans'], node_info)
+                    # print(f"breaking for loop, goodbye {x['Node Type']}")
+                    # break
+        else:
+            # print(query_plan['Node Type'])
+            if query_plan['Node Type'] == node_type:
+                # print(f"found it! returning {query_plan['Node Type']}")
+                node_info.append(query_plan)
+                # print(node_info)
+            # print("going into next Plans")
+            node_info = find_node_info(node_type, query_plan['Plans'], node_info)
+            # print(f"goodbye {query_plan['Node Type']}")
+    
+    # if len(node_info) > 0:
+    #     print( f"node returned {node_info[len(node_info) - 1]['Node Type']}" )
+    #     print("node_info length: " + str(len(node_info)))
+    # else:
+    #     print("no node info")
+    return node_info
 
-# CREATE OTHER FUNCTION FOR COMPARING THE QEP WITH AEP!
-
-# Create separate function for comparing. Always return a string, not output in console!
-# It needs to go to UI, not into console!
-# I know, just for personal checking
+# Annotates according to the nodes found in the qep
 def traverse_qep(qep, aqps, string_v):
 
     if not string_v:
@@ -351,11 +369,10 @@ def traverse_qep(qep, aqps, string_v):
         x = qep['Plan']
         node = x['Node Type']
 
-        # TODO: add qep, aqps as args for functions that need it
         if node == 'Seq Scan':
-            string_v += (seq_scan_ann(qep))
+            string_v += (seq_scan_ann(x))
         elif node == 'Index Scan':
-            string_v +=(index_scan_ann(qep, aqps))
+            string_v +=(index_scan_ann(x, aqps))
         elif node == 'Index Only Scan':
             string_v +=(index_only_scan_ann(x))
         elif node == 'Bitmap Heap Scan':
@@ -363,53 +380,53 @@ def traverse_qep(qep, aqps, string_v):
         elif node == 'Nested Loop':
             string_v +=(nl_join_ann(x))
         elif node == 'Nested Loop Semi Join':
-            string_v +=(nl_semi_join_ann(x))
+            string_v +=(nl_semi_join_ann())
         elif node == 'Merge Join':
-            string_v +=(merge_join_ann(x))
+            string_v +=(merge_join_ann(x, aqps))
         elif node == 'Hash Join':
-            string_v +=(hash_join_ann(x))
+            string_v +=(hash_join_ann(x, aqps))
         elif node == 'Hash':
             string_v +=(hash_ann(x))
         elif node == 'Sort':
             string_v +=(sort_ann(x))
         elif node == 'Incremental Sort':
-            string_v +=(incremental_sort_ann(x))
+            string_v +=(incremental_sort_ann())
         elif node == 'Aggregate':
             string_v +=(aggregate_ann(x))
         elif node == 'HashAggregate':
-            string_v +=(hash_aggregate_ann(x))
+            string_v +=(hash_aggregate_ann())
         elif node == 'GroupAggregate':
-            string_v +=(group_aggregate_ann(x))
+            string_v +=(group_aggregate_ann())
         elif node == 'Limit':
-            string_v +=(limit_ann(x))
+            string_v +=(limit_ann())
         elif node == 'Unique':
-            string_v +=(unique_ann(x))
+            string_v +=(unique_ann())
         elif node == 'Append':
-            string_v +=(append_ann(x))
+            string_v +=(append_ann())
         elif node == 'Gather':
             string_v +=(gather_ann(x))
         elif node == 'Gather Merge':
-            string_v +=(gather_merge_ann(x))
+            string_v +=(gather_merge_ann())
         elif node == 'Materialize':
             string_v +=(materialize_ann(x))
         elif node == 'Memoize':
-            string_v +=(memoize_ann(x))
+            string_v +=(memoize_ann())
 
         if x['Plans']:
             string_v = traverse_qep(x['Plans'], aqps, string_v)
 
-    a = 1
+    # a = 1
     for x in qep:
         # print("In Plans " + str(a))
         if 'Node Type' in x:
             node = x['Node Type']
         else:
-            return string_v #DON'T LEAVE EMPTY RETURNS!
+            return string_v
 
         if node == 'Seq Scan':
             string_v +=(seq_scan_ann(x))
         elif node == 'Index Scan':
-            string_v +=(index_scan_ann(x))
+            string_v +=(index_scan_ann(x, aqps))
         elif node == 'Index Only Scan':
             string_v +=(index_only_scan_ann(x))
         elif node == 'Bitmap Heap Scan':
@@ -417,43 +434,43 @@ def traverse_qep(qep, aqps, string_v):
         elif node == 'Nested Loop':
             string_v +=(nl_join_ann(x))
         elif node == 'Nested Loop Semi Join':
-            string_v +=(nl_semi_join_ann(x))
+            string_v +=(nl_semi_join_ann())
         elif node == 'Merge Join':
-            string_v +=(merge_join_ann(x))
+            string_v +=(merge_join_ann(x, aqps))
         elif node == 'Hash Join':
-            string_v +=(hash_join_ann(qep))
+            string_v +=(hash_join_ann(x, aqps))
         elif node == 'Hash':
             string_v +=(hash_ann(x))
         elif node == 'Sort':
             string_v +=(sort_ann(x))
         elif node == 'Incremental Sort':
-            string_v +=(incremental_sort_ann(x))
+            string_v +=(incremental_sort_ann())
         elif node == 'Aggregate':
-            string_v +=(aggregate_ann(x))
+            string_v +=(aggregate_ann())
         elif node == 'HashAggregate':
-            string_v +=(hash_aggregate_ann(x))
+            string_v +=(hash_aggregate_ann())
         elif node == 'GroupAggregate':
-            string_v +=(group_aggregate_ann(x))
+            string_v +=(group_aggregate_ann())
         elif node == 'Limit':
-            string_v +=(limit_ann(x))
+            string_v +=(limit_ann())
         elif node == 'Unique':
-            string_v +=(unique_ann(x))
+            string_v +=(unique_ann())
         elif node == 'Append':
-            string_v +=(append_ann(x))
+            string_v +=(append_ann())
         elif node == 'Gather':
             string_v +=(gather_ann(x))
         elif node == 'Gather Merge':
-            string_v +=(gather_merge_ann(x))
+            string_v +=(gather_merge_ann())
         elif node == 'Materialize':
             string_v +=(materialize_ann(x))
         elif node == 'Memoize':
-            string_v +=(memoize_ann(x))
+            string_v +=(memoize_ann())
 
         if 'Plans' in x:
             string_v = traverse_qep(x['Plans'], aqps, string_v)
         else:
             continue
-        a += 1
+        # a += 1
 
     print("|||||||||||||||||||||||")
     print(string_v)
