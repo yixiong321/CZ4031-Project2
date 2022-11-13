@@ -5,6 +5,7 @@ from PyQt5 import QtWidgets, uic, Qt, QtSvg, QtCore
 import sys, psycopg2
 from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QVBoxLayout, QGroupBox, QTextEdit
 from blockdiag import parser, builder, drawer
+from tabulate import tabulate
 
 from annotation import *
 from preprocessing import *
@@ -109,13 +110,30 @@ class MainWindow(QMainWindow):
             # aqp_relations stores list of string input for blockdiags for AQPs
         
             mapping = get_mapping(self.query_plans,QueryFromGUI)
-            for i in mapping:
-                print()
-                i.print_sql_query_list()
-                
+            generate_table(mapping)
+            # for i in mapping:
+            #     print()
+            #     i.print_sql_query_list()
+            
+            # #This gets all the query terms of a query in a list
+            # qtlist = mapping[0].return_query_terms_list()
+            # nodelinelist = mapping[0].return_node_line()
+            # print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
+            # #print(tabulate(qtlist, tablefmt="grid"))
+            # head = ["Line No.", "Query Term", "Annotation"]
+
+            # table = [["" for i in range(3)] for j in range(len(qtlist))]
+            # count = 0
+            # for i in qtlist:
+            #     table[count][0] = nodelinelist[count][0] #line number
+            #     table[count][1] = i #query term
+            #     table[count][2] = nodelinelist[count][1] #node 
+            #     count+=1
+
+            # print(tabulate(table, headers=head, tablefmt="grid"))
             #print("Total number of query plans: "+str(len(self.query_plans))) 
             #print(len(mapping))
-            
+
             #print(ann_list)
 
             #res = "blockdiag { " + str(res[0]) + "}"
@@ -127,7 +145,7 @@ class MainWindow(QMainWindow):
 
             #ann_list = traverse_qep(self.query_plans[0])
 
-            print(self.query_plans)
+            #print(self.query_plans)
 
 
             loop_v = 0

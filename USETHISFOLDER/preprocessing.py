@@ -215,6 +215,16 @@ class line():
         print(self.line_number,self.query_term,self.subquery_number,self.node)
     def set_node(self,node):
         self.node = node
+    def return_query_term(self):
+        return self.query_term
+    def return_node(self):
+        #return self.node
+        for key, value in self.node.items():
+            if 'Node Type' in key:
+                return value
+            else: return "-"
+    def return_lineno(self):
+        return self.line_number
 
 class Query():
     def __init__(self,query):
@@ -231,6 +241,7 @@ class Query():
         for x in range(len(sql)):
             sql[x]=sql[x].lstrip()
         sql_query_list=[]
+        
         subquery_counter=-1
         stack=[]
         j=1
@@ -245,11 +256,27 @@ class Query():
                 subquery_counter-=1
                 j+=1
             sql_query_list.append(line(query_term,i,subquery_counter))
-        self.sql_query_list = sql_query_list
+        self.sql_query_list = sql_query_list        
     
     def print_sql_query_list(self):
         for i in self.sql_query_list:
             i.print_attrs()
+
+    def return_query_terms_list(self):
+        list = []
+        for i in self.sql_query_list:
+            list.append(i.return_query_term())
+        return list
+
+    def return_node_line(self):
+        list = []
+        count = 0
+        for i in self.sql_query_list:  
+            temp = [i.return_lineno(), i.return_node()]    
+            list.append(temp)
+        return list
+
+    
 
 def display(plan,nodes,level=0):
     #print('    ' * level, end='')
