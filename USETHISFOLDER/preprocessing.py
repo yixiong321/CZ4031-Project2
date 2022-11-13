@@ -12,10 +12,11 @@ def get_unique_node_types_dic(level, dic):
     if level['Node Type'] in dic:
         dic[level['Node Type']] += 1
     if "Plans" not in level:
-        return
+        dic[level['Node Type']] = 0
+        return dic
     else:
         for p in level['Plans']:
-            get_unique_node_types_dic(p, dic)
+            dic=get_unique_node_types_dic(p, dic)
     return dic
 
 
@@ -32,7 +33,11 @@ def get_nodelist(level, lis):
 def convert(node, dic):
     # stopping cond, no more plans reach end of branch
     if "Plans" not in node:
-        id = max(dic.keys()) + 1
+        if dic.keys():
+            id = max(dic.keys()) + 1
+        else:
+            id = 0
+        
         if 'Alias' in node:
             label = str(id) + "[label='" + node['Node Type'] + "\n (" + node['Alias'] + ")'];\n"
         else:
@@ -64,7 +69,7 @@ def fetch_AQPS(cur, node_types, sqlquery, query_plans, relations_list):
     sqlquery = Query(sqlquery)
     for key in node_types:
         if key in node_types_dict:
-            # print(node_types_dict[key])
+            
 
             cur.execute("SET LOCAL " + node_types_dict[key] + " TO OFF")
             cur.execute("EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)" + sqlquery.get_query())

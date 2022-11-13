@@ -158,9 +158,11 @@ class MainWindow(QMainWindow):
 
             block_diag_relations.append(res)
             # fetching AQPS
-            if len(node_types) > 1:
-                self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types.keys(), QueryFromGUI,
+            
+            self.query_plans, self.block_diag_relations = fetch_AQPS(self.c_r, node_types.keys(), QueryFromGUI,
                                                                          self.query_plans, block_diag_relations)
+
+
             # query_plans stores list of plans , [QEP, 'rest of AQPs']
             # aqp_relations stores list of string input for blockdiags for AQPs
         
@@ -208,10 +210,9 @@ class MainWindow(QMainWindow):
             # print(self.query_plans)
 
             loop_v = 0
-
-            for plan in self.query_plans:
+            for x in range(1,len(list(self.query_plans.values())[1:])+1):
                 # print(plan)
-
+                
                 tab1 = QtWidgets.QWidget()
                 tab1.layout = QVBoxLayout()
                 groupbox = QGroupBox("Annotation")
@@ -222,9 +223,12 @@ class MainWindow(QMainWindow):
                 TEXT.setReadOnly(True)
                 
                 aqplist = list(self.query_plans.values())
-                print(aqplist)
-                test = traverse_qep(self.query_plans[loop_v], aqplist,"")
-
+                
+                print(self.query_plans['0'])
+                print([aqplist[x]])
+                test = traverse_qep(self.query_plans['0'], [aqplist[x]],"")
+                print("test:")
+                print(test)
                 # print(test)
                 TEXT.setText(test)
                 #TEXT.setText(x)
@@ -243,9 +247,9 @@ class MainWindow(QMainWindow):
                 tab1.setLayout(tab1.layout)
                 # tabs are being added also during 2nd execution of query
                 if loop_v == 0:
-                    self.tW.addTab(tab1, "QEP")
+                    self.tW.addTab(tab1, "QEP vs AQP1")
                 else:
-                    self.tW.addTab(tab1, "AEP " + str(loop_v))
+                    self.tW.addTab(tab1, "QEP vs AQP" + str(x))
 
                 loop_v += 1
 
@@ -277,7 +281,7 @@ class MainWindow(QMainWindow):
         for i in range(AEP_counter-1):
             self.data['AEP'+str(i+1)] = []
             
-        print(self.data)
+        #print(self.data)
 
         ammount_of_c = 0
 

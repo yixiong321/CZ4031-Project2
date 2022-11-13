@@ -363,9 +363,9 @@ def find_node_info(node_type, query_plan, node_info):
 
 # Annotates according to the nodes found in the qep
 def traverse_qep(qep, aqps, string_v):
+    print("inside traverse")
+    print(string_v)
 
-    if not string_v:
-        string_v = ""
 
     if 'Plan' in qep:
         x = qep['Plan']
@@ -414,7 +414,9 @@ def traverse_qep(qep, aqps, string_v):
         elif node == 'Memoize':
             string_v +=(memoize_ann())
 
-        if x['Plans']:
+        if 'Plans' not in qep['Plan']:
+            return string_v
+        else:
             string_v = traverse_qep(x['Plans'], aqps, string_v)
 
     # a = 1
