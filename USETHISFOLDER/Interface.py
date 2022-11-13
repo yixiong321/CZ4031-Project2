@@ -416,9 +416,11 @@ class UI_MainWindow(object):
 
                 aqplist = list(self.query_plans.values())
 
-                print(self.query_plans['0'])
-                print([aqplist[x]])
+                # print(self.query_plans['0'])
+                # print([aqplist[x]])
                 test = traverse_qep(self.query_plans['0'], [aqplist[x]], "")
+                print("1st test done")
+                test = test + compare_plans(self.query_plans['0'], aqplist[x])
 
                 print(test)
 

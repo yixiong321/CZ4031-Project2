@@ -356,7 +356,8 @@ def compare_plans(qep, aqp):
     aqp_time = round(aqp['Execution Time'],1)
     time_diff = round(aqp_time - qep_time, 1)
     compare_ann = f"\nQEP costs {qep_cost} and AQP costs {aqp_cost}. The cost difference is {cost_diff}.\nQEP took {qep_time}ms and AQP took {aqp_time}ms. The time difference is {time_diff}ms."
-
+    print(compare_ann)
+    return compare_ann
 
 # Annotates according to the nodes found in the qep
 def traverse_qep(qep, aqps, string_v):
