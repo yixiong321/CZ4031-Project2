@@ -407,10 +407,6 @@ class UI_MainWindow(object):
                 tab1 = QtWidgets.QWidget()
                 tab1.layout = QVBoxLayout()
 
-
-                new_layout = QHBoxLayout()
-
-
                 groupbox = QGroupBox("Annotation")
                 groupbox.setObjectName = "Annotation"
                 vbox = QVBoxLayout()
