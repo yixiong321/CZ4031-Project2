@@ -334,46 +334,19 @@ def traverse_qep(qep, string_v):
 
     return string_v
 
-def generate_table(mapping):
-    print("Total number of query plans: "+str(len(mapping))) 
+def generate_table(i):
+    #This gets all the query terms of a query 'i'
+    qtlist = i.return_query_terms_list()
+    nodelinelist = i.return_node_line()
+    print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
+    #print(tabulate(qtlist, tablefmt="grid"))
 
-
-    head = ['Line No.', 'Query Terms', 'QEP']
-    AEP_counter = len(mapping)-1
-    for i in range(AEP_counter):
-        head.append('AEP' + str(i+1))
-    qtlist = mapping[0].return_query_terms_list()
-    nodelinelist = mapping[0].return_node_line()
-    table = [["" for i in range(cols)] for j in range(len(qtlist))]
+    table = [["" for i in range(3)] for j in range(len(qtlist))]
     count = 0
-    cols = (len(mapping)) + 1
-    for j in qtlist:
-        for k in range(cols):
-            table[count][k] = nodelinelist[count][0] #line number
-            table[count][k] = j #query term
+    for i in qtlist:
+        table[count][0] = nodelinelist[count][0] #line number
+        table[count][1] = i #query term
+        table[count][2] = nodelinelist[count][1] #node type
         count+=1
 
-    for i in mapping:
-        # print()
-        # i.print_sql_query_list()
-
-        #This gets all the query terms of a query in a list
-        #qtlist = i.return_query_terms_list()
-        nodelinelist = i.return_node_line()
-        print("SIZE OF QUERY TERMS LIST: " + str(len(qtlist)))
-        #print(tabulate(qtlist, tablefmt="grid"))
-        
-        
-
-
-        cols = (len(mapping)) + 1
-
-        table = [["" for i in range(cols)] for j in range(len(qtlist))]
-        count = 0
-        for j in qtlist:
-            for k in range(cols):
-                table[count][k] = nodelinelist[count][0] #line number
-                table[count][k] = j #query term
-            count+=1
-
-    print(tabulate(table, headers=head, tablefmt="grid"))
+    return table

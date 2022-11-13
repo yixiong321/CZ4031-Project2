@@ -5,7 +5,8 @@ from PyQt5 import QtWidgets, uic, Qt, QtSvg, QtCore
 import sys, psycopg2
 
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QVBoxLayout, QGroupBox, QTextEdit, QStyleFactory
+from PyQt5.QtWidgets import QMainWindow, QPushButton, QApplication, QVBoxLayout, QGroupBox, QTextEdit, QStyleFactory, \
+    QWidget, QTableWidget, QTableWidgetItem
 from blockdiag import parser, builder, drawer
 
 from annotation import *
@@ -32,7 +33,10 @@ class MainWindow(QMainWindow):
         self.sql_btn.clicked.connect(self.ExeSQLComm)
         self.ldQ.clicked.connect(self.displayQuery)
 
-        #self.dQp1.clicked.connect(self.displayDiag)
+
+        ##HANDLE DISPLAYING TABLE
+        #self.sql_btn.clicked.connect(self.DisplayTable)
+        #self.tW.tabBarClicked.connect(self.DisplayTable)
 
         self.SQL_Connection = 123
 
@@ -93,11 +97,13 @@ class MainWindow(QMainWindow):
 
     #Display diagram button
     def displayDiag(self, number):
-        inner =""
+
+        inner = ""
         for i in self.block_diag_relations[number]:
-            inner=inner+i+'\n'
-        #print(inner)
+            inner = inner + i + '\n'
+        # print(inner)
         diag_string = "blockdiag {orientation = portrait;\n" + inner + "}"
+
 
         print(diag_string)
 
@@ -157,9 +163,20 @@ class MainWindow(QMainWindow):
                                                                          self.query_plans, block_diag_relations)
             # query_plans stores list of plans , [QEP, 'rest of AQPs']
             # aqp_relations stores list of string input for blockdiags for AQPs
-        
-            mapping = get_mapping(self.query_plans,QueryFromGUI)
-            generate_table(mapping)
+
+            self.mapping = get_mapping(self.query_plans, QueryFromGUI)
+            #print("Total number of query plans: " + str(len(mapping)))
+            #table1 = []
+            #table2 = []
+            #for i in mapping:
+            #    print()
+            #    i.print_sql_query_list()
+            #    self.table = generate_table(i)
+
+
+           # head = ["Line No.", "Query Term", "Node Type"]
+           # x = tabulate(table, headers=head, tablefmt="grid")
+           # print(x)
             # for i in mapping:
             #     print()
             #     i.print_sql_query_list()
@@ -211,15 +228,21 @@ class MainWindow(QMainWindow):
 
                 test = traverse_qep(self.query_plans[loop_v], "")
 
-                #print(test)
-                #TEXT.setText(test)
-                TEXT.setText(x)
+                # print(test)
+                TEXT.setText(test)
+                #TEXT.setText(x)
+
+                BUTTON2 = QPushButton("Display Mapping")
+
                 BUTTON = QPushButton("Display Physical Query Plan")
 
                 BUTTON.clicked.connect(partial(self.displayDiag, loop_v))
+                BUTTON2.clicked.connect(self.DisplayTable)
                 vbox.addWidget(TEXT)
                 self.AddToTab(tab1, groupbox)
                 self.AddToTab(tab1, BUTTON)
+                self.AddToTab(tab1, BUTTON2)
+
                 tab1.setLayout(tab1.layout)
                 # tabs are being added also during 2nd execution of query
                 if loop_v == 0:
@@ -243,6 +266,70 @@ class MainWindow(QMainWindow):
             print(error)
         finally:
             self.TerminateConnectionToPostgreSQL()
+
+    def DisplayTable(self):
+
+        #Sample code to run the table window
+
+
+
+        self.data = {
+                'Query Term': [],
+                'Node Type': []}
+
+        ammount_of_c = 0
+
+        value = generate_table(self.mapping[self.tW.currentIndex()])
+
+      #  print(value.get_query()
+
+        print(value)
+
+        for x in value:
+
+            self.data["Query Term"].append(str(x[1]))
+
+            if str(x[2]) == "None" :
+                self.data["Node Type"].append("~")
+            else:
+                self.data["Node Type"].append(str(x[2]))
+
+            ammount_of_c += 1
+
+        table = QTableWidget()
+
+        table.setSizeAdjustPolicy(
+            QtWidgets.QAbstractScrollArea.AdjustToContents)
+
+        table.setColumnCount(len(self.data))
+        table.setRowCount(ammount_of_c) #Amount of data in each row
+
+        horHeaders = []
+
+        for n, key in enumerate(sorted(self.data.keys())):
+            horHeaders.append(key)
+            for m, item in enumerate(self.data[key]):
+                newitem = QTableWidgetItem(item)
+                print(newitem)
+                table.setItem(m, n, newitem)
+        table.setHorizontalHeaderLabels(horHeaders)
+
+        print("Display Query!")
+
+        self.main = QVBoxLayout()
+
+
+        self.main.addWidget(table)
+
+        table.resizeColumnsToContents()
+
+        self.window = QWidget()
+
+        self.window.setLayout(self.main)
+
+        self.window.resize(self.main.sizeHint())
+
+        self.window.show()
 
 
 # Start GUI Threadz
