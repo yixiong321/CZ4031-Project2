@@ -36,42 +36,104 @@ def splitQuery(query):
 
     return list2
 
+def format(string):
+    if '(' in string:
+        string = string.replace('(', '')
+        string = string.replace(')', '')
+    if '::date' in string:
+        string = string.replace('::date', '')
+    if '::numeric' in string:
+        string = string.replace('::numeric', '')
+    if 'PARTIAL ' in string:
+        string = string.replace('PARTIAL ', '')
+    return string
 
-# Scan Methods
+# SCAN OPERATORS
 
 # Sequential Scan
 def seq_scan_ann(plan):
     # TODO: if have 'Filter', say that it is done using the filter
-    return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple. \n"""
+    if 'Filter' in plan:
+        cond = plan['Filter']
+        condd = format(cond)
+        return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple. Tuples that do not satisfy {condd} are removed from the output.\n"""
+    return f"""The Sequential Scan operation is performed here because there is no index created on the table, hence the only way is to go through the table tuple by tuple.\n"""
     # return f"""The Sequential Scan operation is performed here because there is no index created on the table {plan['Alias']}, hence the only way is to go through the table tuple by tuple. \n"""
 
 
 # Index Scan
-def index_scan_ann(plan):
-    # TODO: iterate through aqps to find other scans to compare costs to
-    return f"""The Index Scan operation is performed here because there is an index {plan['Index Name']} on the table {plan['Alias']} and an index scan has lower cost compared to a sequential scan. \n"""
+def index_scan_ann(qep, aqps):
+    other_scans = ['Seq Scan', 'Bitmap Index Scan']
+    scans_found = []
+    scan_to_cost = {}
+    index_scan_cost = qep['Total Cost']
+    for plan in aqps:
+        for scan in other_scans:
+            print(f'Finding {scan}\n')
+            scan_infos = find_node_info(scan, plan, [])
+            if scan_infos is not None:
+                for scan_info in scan_infos:
+                    if 'Alias' in scan_info:
+                        if scan_info['Alias'] == qep['Alias']:
+                            scan_cost = scan_info['Total Cost']
+                            diff = round(scan_cost - index_scan_cost, 2)
+                            scan_to_cost[scan] = diff
+                            scans_found.append(scan)
+                            # print("scans_found: " + str(scans_found))
+                    else:
+                        if scan_info['Index Name'] == qep['Index Name']:
+                            scan_cost = scan_info['Total Cost']
+                            diff = round(scan_cost - index_scan_cost, 2) # is dividing better??
+                            print(f"diff in cost for {scan_info['Node Type']} is {diff}")
+                            scan_to_cost[scan] = diff
+                            scans_found.append(scan)
+                            # print("scans_found: " + str(scans_found))
+    print("scans found list is " + str(len(scans_found)))
+    
+    if len(scans_found) > 0:
+        ann = f"""The Index Scan operation is performed here because there is an index {qep['Index Name']} on the table {qep['Relation Name']} and an index scan has lower cost compared to a """
+        s = 1
+        for scan in scan_to_cost:
+            ann = ann + scan + " operation which is " + str(scan_to_cost[scan]) + " more costly"
+            s+=1
+            if s == len(scans_found):
+                ann = ann + " and a "
+        return ann + '\n'
+    
+    # default annotation if no other scans used in aqps
+    return f"""The Index Scan operation is performed here because there is an index {qep['Index Name']} on the table {qep['Alias']}.\n"""
 
 
 # Index-Only Scan
 def index_only_scan_ann(plan):
-    return f"""The Index-Only Scan operation is performed here because only one attribute, {plan['Output']}, is needed to satisfy the query. \n"""
+    return f"""The Index-Only Scan operation is performed here because only one attribute, {plan['Output']}, is needed to satisfy the query.\n"""
 
 
 # Bitmap Scan
 def bitmap_scan_ann(plan):
-    # TODO: find 'Bitmap Index Scan' to get the index cond
-    # TODO: find the number of rows
-    return f"""The Bitmap Scan operation is performed here because the number of records chosen are too many for the index scan and too few for the sequential scan. \n"""
+    filter = plan['Filter']
+    filterr = format(filter)
+    node_info = find_node_info('Bitmap Index Scan', plan, [])
+    cond = node_info[0]['Index Cond']
+    condd = format(cond)
+    num_of_rows = plan['Actual Rows']
+    return f"""The Bitmap Scan operation is performed here because the number of records accessed ({num_of_rows}) are too many for an index scan and too little for a sequential scan. The scan uses {filterr} and {condd} to filter the table.\n"""
 
 
-# Join Methods
+# JOIN OPERATORS
 
 # Nested Loop Join
 def nl_join_ann(plan):
-    # TODO: iterate through aqps to find mergejoin and hashjoin
-    # TODO: then compare their costs
-    # TODO: find if got 'Filter', then use info in ann, if no, say joining which 2 tables (find_node_info(any scan, plan))
-    return f"""The Nested Loop Join operation is performed here because the join clause is '<' OR there is no join clause. \n"""
+    row1 = 0
+    row2 = 0
+    for child in plan['Plans']:
+        print(child['Node Type'])
+        if row1 == 0:
+            row1 = child['Actual Rows']
+        else:
+            row2 = child['Actual Rows']
+    # print(f"{row1} and {row2}")
+    return f"""The Nested Loop Join operation is performed here because one of the child nodes' output is significantly smaller than the other. In this case, one has {row1} rows and the other has {row2} rows.\n"""
 
 
 # Nested Loop Semi Join
@@ -80,23 +142,83 @@ def nl_semi_join_ann(plan):
 
 
 # Merge Join
-def merge_join_ann(plan):
-    return f"""The Merge Join operation is performed here because both tables are sorted and the join clause is '='. It has a lesser cost for the \n"""
+def merge_join_ann(qep, aqps):
+    cond = qep['Merge Cond']
+    condd = format(cond)
+
+    # Finding number of rows on each side of the join
+    row1 = 0
+    row2 = 0
+    for child in qep['Plans']:
+        if row1 == 0:
+            row1 = child['Actual Rows']
+        else:
+            row2 = child['Actual Rows']
+    
+    # Calculating cost differences in joins
+    merge_join_cost = qep['Total Cost']
+    join_to_cost = {}
+    for plan in aqps:
+        # print("\n ok new plan")
+        join_infos = find_node_info('Hash Join', plan, [])
+        for join_info in join_infos:
+            if join_info['Hash Cond'] == cond:
+                join_cost = join_info['Total Cost']
+                diff = round(join_cost - merge_join_cost, 2)
+                join_to_cost[join_info['Node Type']] = diff
+    
+    return f"""The Merge Join operation is performed here because both tables are sorted and the join clause is '=' as in {condd}. Both sides of the join are also large at {row1} and {row2} rows. Merge join is {join_to_cost['Hash Join']} less costly than a hash join.\n"""
 
 
 # Hash Join
-def hash_join_ann(qep):
-    hash_info = find_node_info('Hash', qep)
-    # TODO: iterate through aqps to find mergejoin and nestedloop
-    # TODO: then compare their costs
-    return f"""The Hash Join operation is performed here because a hash table has been created on .The join is done on the condition that. \n"""
+def hash_join_ann(qep, aqps):
+    cond = qep['Hash Cond']
+    condd = format(cond)
+
+    # Find number of rows on each side of the join
+    row1 = 0
+    row2 = 0
+    for child in qep['Plans']:
+        if row1 == 0:
+            row1 = child['Actual Rows']
+        else:
+            row2 = child['Actual Rows']
+    
+    # Compare costs with Nested Loop and Merge Join (if any)
+    other_joins = ['Nested Loop', 'Merge Join']
+    joins_found = []
+    join_to_cost = {}
+    hash_join_cost = qep['Total Cost']
+    for plan in aqps:
+        for join in other_joins:
+            print(f'\nFinding {join}')
+            join_infos = find_node_info(join, plan, [])
+            if join_infos is not None:
+                for join_info in join_infos:
+                    if join_info['Output'] == qep['Output']:
+                        join_cost = join_info['Total Cost']
+                        diff = round(join_cost - hash_join_cost, 2)
+                        join_to_cost[join] = diff
+                        joins_found.append(join)
+                        # print("scans_found: " + str(joins_found))
+    print("scans found list is " + str(len(joins_found)))
+    if len(joins_found) > 0:
+        ann = f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem). """
+        for join in join_to_cost:
+            ann = ann + f"{join} is more costly by {join_to_cost[join]}. "
+        return ann + '\n'
+    
+    # default annotation if no other joins found
+    return f"""The Hash Join operation is performed here because the join clause is '=' as in {condd} and both sides of the join is large at {row1} and {row2} rows. The hashed table is small enough to fit the working memory (work_mem).\n"""
 
 
 # Miscellaneous Operations
 
 # Hash
 def hash_ann(plan):
-    return f"""The Hash operation is performed here because the table is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}. \n """
+    node_info = find_node_info('Index Scan', plan, [])
+    table = node_info[0]['Alias']
+    return f"""The Hash operation is performed here because the table '{table}' is the smaller table so minimal memory is required to store the hash table in memory. Here, the hash is done on the {plan['Output']}."""
 
 
 # Sort
@@ -112,28 +234,30 @@ def incremental_sort_ann(plan):
 # Aggregate
 def aggregate_ann(plan):
     if 'Filter' in plan:
-        if 'sum' in plan['Filter']:
-            return f"""The Aggregate operation is performed here because there is an aggregate function SUM in this query. \n"""
-        elif 'count' in plan['Filter']:
-            return f"""The Aggregate operation is performed here because there is an aggregate function COUNT in this query. \n"""
-        elif 'avg' in plan['Filter']:
-            return f"""The Aggregate operation is performed here because there is an aggregate function AVG in this query. \n"""
-        elif 'max' in plan['Filter']:
-            return f"""The Aggregate operation is performed here because there is an aggregate function MAX in this query. \n"""
-        elif 'min' in plan['Filter']:
-            return f"""The Aggregate operation is performed here because there is an aggregate function MIN in this query. \n"""
+        filter = plan['Filter']
     else:
-        if 'sum' in plan['Output'][0]:
-            return f"""The Aggregate operation is performed here because there is an aggregate function SUM in this query. \n"""
-        elif 'count' in plan['Output'][0]:
-            return f"""The Aggregate operation is performed here because there is an aggregate function COUNT in this query. \n"""
-        elif 'avg' in plan['Output'][0]:
-            return f"""The Aggregate operation is performed here because there is an aggregate function AVG in this query. \n"""
-        elif 'max' in plan['Output'][0]:
-            return f"""The Aggregate operation is performed here because there is an aggregate function MAX in this query. \n"""
-        elif 'min' in plan['Output'][0]:
-            return f"""The Aggregate operation is performed here because there is an aggregate function MIN in this query. \n"""
-    return f"""The Aggregate operation is performed here because there is a calculation to be carried out in this query. \n"""
+        for element in plan['Output']:
+            funcs = ['sum', 'count', 'avg', 'max', 'min']
+            for f in funcs:
+                if f in element:
+                    filter = element
+                    print(filter)
+                    break # only takes last filter because dk which is used by operator
+    filterr = format(filter)
+    
+    if 'sum' in filter:
+        return f"""The Aggregate operation is performed here because there is an aggregate function SUM in this query: {filterr}.\n"""
+    elif 'count' in filter:
+        return f"""The Aggregate operation is performed here because there is an aggregate function COUNT in this query: {filterr}.\n"""
+    elif 'avg' in filter:
+        return f"""The Aggregate operation is performed here because there is an aggregate function AVG in this query: {filterr}.\n"""
+    elif 'max' in filter:
+        return f"""The Aggregate operation is performed here because there is an aggregate function MAX in this query: {filterr}.\n"""
+    elif 'min' in filter:
+        return f"""The Aggregate operation is performed here because there is an aggregate function MIN in this query: {filterr}.\n"""
+    
+    # default annotation if no agg function found
+    return f"""The Aggregate operation is performed here because there is a calculation to be carried out in this query.\n"""
 
 
 # Hash Aggregate
@@ -213,10 +337,12 @@ def find_node_info(node_type, query_plan):
             node_info = find_node_info(node_type, x['Plans'])
             return node_info
 
-#CREATE OTHER FUNCTION FOR COMPARING THE QEP WITH AEP!
-#Create separate function for comparing. Always return a string, not output in console!
-#It needs to go to UI, not into console!
-def traverse_qep(qep, string_v):
+# CREATE OTHER FUNCTION FOR COMPARING THE QEP WITH AEP!
+
+# Create separate function for comparing. Always return a string, not output in console!
+# It needs to go to UI, not into console!
+# I know, just for personal checking
+def traverse_qep(qep, aqps, string_v):
 
     if not string_v:
         string_v = ""
@@ -229,7 +355,7 @@ def traverse_qep(qep, string_v):
         if node == 'Seq Scan':
             string_v += (seq_scan_ann(qep))
         elif node == 'Index Scan':
-            string_v +=(index_scan_ann(qep))
+            string_v +=(index_scan_ann(qep, aqps))
         elif node == 'Index Only Scan':
             string_v +=(index_only_scan_ann(x))
         elif node == 'Bitmap Heap Scan':
@@ -270,7 +396,7 @@ def traverse_qep(qep, string_v):
             string_v +=(memoize_ann(x))
 
         if x['Plans']:
-            string_v = traverse_qep(x['Plans'], string_v)
+            string_v = traverse_qep(x['Plans'], aqps, string_v)
 
     a = 1
     for x in qep:
@@ -324,7 +450,7 @@ def traverse_qep(qep, string_v):
             string_v +=(memoize_ann(x))
 
         if 'Plans' in x:
-            string_v = traverse_qep(x['Plans'], string_v)
+            string_v = traverse_qep(x['Plans'], aqps, string_v)
         else:
             continue
         a += 1

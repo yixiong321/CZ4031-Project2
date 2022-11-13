@@ -137,6 +137,6 @@ def connect():
             print('Database connection closed.')
 
 
-connect()
-print(node_types_dict)
+# connect()
+# print(node_types_dict)
 
